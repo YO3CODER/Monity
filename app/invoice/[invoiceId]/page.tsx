@@ -1,218 +1,206 @@
+// app/components/InvoicePDF.tsx
 "use client"
-import { deleteInvoice, getInvoiceById, updateInvoice } from '@/app/actions'
-import InvoiceInfo from '@/app/components/InvoiceInfo'
-import InvoiceLines from '@/app/components/InvoiceLines'
-import InvoicePDF from '@/app/components/InvoicePDF'
-import VATControl from '@/app/components/VATControl'
-import Wrapper from '@/app/components/Wrapper'
+
 import { Invoice, Totals } from '@/type'
-import { Save, Trash } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import React, { useCallback, useEffect, useState } from 'react'
+import confetti from 'canvas-confetti'
+import html2canvas from 'html2canvas-pro'
+import jsPDF from 'jspdf'
+import { ArrowDownFromLine, Layers } from 'lucide-react'
+import React, { useRef, useState } from 'react'
 
-const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
-  const [invoice, setInvoice] = useState<Invoice | null>(null);
-  const [initialInvoice, setInitialInvoice] = useState<Invoice | null>(null);
-  const [totals, setTotals] = useState<Totals | null>(null)
-  const [isSaveDisabled, setIsSaveDisabled] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const router = useRouter();
-
-  const fetchInvoice = useCallback(async () => {
-    try {
-      const { invoiceId } = await params
-      const fetchedInvoice = await getInvoiceById(invoiceId)
-      if (fetchedInvoice) {
-        setInvoice(fetchedInvoice)
-        setInitialInvoice(fetchedInvoice)
-      }
-    } catch (error) {
-      console.error(error)
-    }
-  }, [params])
-
-  useEffect(() => {
-    fetchInvoice()
-  }, [fetchInvoice])
-
-  useEffect(() => {
-    if (!invoice) return;
-    const ht = invoice.lines.reduce((acc, { quantity, unitPrice }) =>
-      acc + quantity * unitPrice, 0
-    )
-    const vat = invoice.vatActive ? ht * (invoice.vatRate / 100) : 0
-    setTotals({ totalHT: ht, totalVAT: vat, totalTTC: ht + vat })
-  }, [invoice])
-
-  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newStatus = parseInt(e.target.value)
-    if (invoice) {
-      const updatedInvoice = { ...invoice, status: newStatus }
-      setInvoice(updatedInvoice)
-    }
-  }
-
-  useEffect(() => {
-    setIsSaveDisabled(
-      JSON.stringify(invoice) === JSON.stringify(initialInvoice)
-    )
-  }, [invoice, initialInvoice])
-
-  const handleSave = async () => {
-    if (!invoice) return;
-    setIsLoading(true)
-    try {
-      await updateInvoice(invoice)
-      const updatedInvoice = await getInvoiceById(invoice.id)
-      if (updatedInvoice) {
-        setInvoice(updatedInvoice)
-        setInitialInvoice(updatedInvoice)
-      }
-      setIsLoading(false)
-    } catch (error) {
-      console.error("Erreur lors de la sauvegarde de la facture :", error);
-      setIsLoading(false)
-    }
-  }
-
-  const handleDelete = async () => {
-    try {
-      await deleteInvoice(invoice?.id as string)
-      router.push("/")
-    } catch (error) {
-      console.error("Erreur lors de la suppression de la facture.", error);
-    }
-  }
-
-  if (!invoice || !totals) return (
-    <div className='flex justify-center items-center h-screen w-full'>
-      <div className='flex flex-col items-center gap-4'>
-        <span className="loading loading-spinner loading-lg text-yellow-500"></span>
-        <span className='text-gray-600 font-medium'>Chargement de la facture...</span>
-      </div>
-    </div>
-  )
-
-  return (
-    <Wrapper>
-      <>
-        <div>
-          <div className='flex flex-col md:flex-row md:justify-between md:items-center mb-4'>
-            <p className='badge badge-ghost badge-lg uppercase'>
-              <span>Facture-</span>{invoice?.id}
-            </p>
-            <div className='flex md:mt-0 mt-4 gap-2'>
-              <select
-                className='select select-sm select-bordered w-full'
-                value={invoice?.status}
-                onChange={handleStatusChange}
-              >
-                <option value={1}>Brouillon</option>
-                <option value={2}>En attente</option>
-                <option value={3}>Payée</option>
-                <option value={4}>Annulée</option>
-                <option value={5}>Impayée</option>
-              </select>
-
-              <button 
-                className='btn btn-sm btn-accent'
-                disabled={isSaveDisabled || isLoading}
-                onClick={handleSave}
-              >
-                {isLoading ? (
-                  <span className="loading loading-spinner loading-xs"></span>
-                ) : (
-                  <>
-                    Sauvegarder
-                    <Save className="w-4 ml-2" />
-                  </>
-                )}
-              </button>
-
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className='btn btn-sm btn-error'
-              >
-                <Trash className='w-4' />
-              </button>
-            </div>
-          </div>
-
-          <div className='flex flex-col md:flex-row w-full gap-4'>
-            <div className='flex w-full md:w-1/3 flex-col'>
-              <div className='mb-4 bg-base-200 rounded-xl p-7'>
-                <div className='flex justify-between items-center mb-4'>
-                  <div className='badge badge-accent'>Totaux</div>
-                  <VATControl invoice={invoice} setInvoice={setInvoice} />
-                </div>
-
-                <div className='flex justify-between'>
-                  <span>Total Hors Taxes</span>
-                  <span>{totals.totalHT.toFixed(2)} FCFA</span>
-                </div>
-
-                <div className='flex justify-between'>
-                  <span>TVA ({invoice?.vatActive ? `${invoice?.vatRate}` : '0'} %)</span>
-                  <span>{totals.totalVAT.toFixed(2)} FCFA</span>
-                </div>
-
-                <div className='flex justify-between font-bold'>
-                  <span>Total TTC</span>
-                  <span>{totals.totalTTC.toFixed(2)} FCFA</span>
-                </div>
-              </div>
-
-              <InvoiceInfo invoice={invoice} setInvoice={setInvoice} />
-            </div>
-
-            <div className='flex w-full md:w-2/3 flex-col'>
-              <InvoiceLines invoice={invoice} setInvoice={setInvoice} />
-              <InvoicePDF invoice={invoice} totals={totals} />
-            </div>
-          </div>
-        </div>
-
-        {/* Modal de confirmation de suppression */}
-        {showDeleteModal && (
-          <div className="modal modal-open">
-            <div className="modal-box">
-              <h3 className="font-bold text-lg text-error flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                Confirmation
-              </h3>
-              <p className="py-4 text-lg">
-                Êtes-vous sûr de vouloir supprimer cette facture ?
-              </p>
-              <p className="text-sm text-gray-500 mb-4">
-                Cette action est irréversible.
-              </p>
-              <div className="modal-action">
-                <button 
-                  className="btn btn-error" 
-                  onClick={() => {
-                    handleDelete()
-                    setShowDeleteModal(false)
-                  }}
-                >
-                  Oui, supprimer
-                </button>
-                <button 
-                  className="btn" 
-                  onClick={() => setShowDeleteModal(false)}
-                >
-                  Annuler
-                </button>
-              </div>
-            </div>
-            <div className="modal-backdrop" onClick={() => setShowDeleteModal(false)}></div>
-          </div>
-        )}
-      </>
-    </Wrapper>
-  )
+interface FacturePDFProps {
+    invoice: Invoice
+    totals: Totals
 }
 
-export default Page
+function formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    const options: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' };
+    return date.toLocaleDateString('fr-FR', options);
+}
+
+const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
+
+    const factureRef = useRef<HTMLDivElement>(null)
+    const [isGenerating, setIsGenerating] = useState(false)
+
+    const handleDownloadPdf = async () => {
+        const element = factureRef.current
+        if (element && !isGenerating) {
+            try {
+                setIsGenerating(true)
+
+                const canvas = await html2canvas(element, { 
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    allowTaint: false,
+                    windowWidth: 1200 // Force une largeur fixe pour le rendu
+                })
+                
+                const imgData = canvas.toDataURL('image/png')
+
+                const pdf = new jsPDF({
+                    orientation: "portrait",
+                    unit: "mm",
+                    format: "A4"
+                })
+
+                const pdfWidth = pdf.internal.pageSize.getWidth()
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+                pdf.save(`facture-${invoice.name || invoice.id}.pdf`)
+
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    zIndex: 9999
+                })
+
+            } catch (error) {
+                console.error('Erreur lors de la génération du PDF :', error);
+                alert('Une erreur est survenue lors de la génération du PDF');
+            } finally {
+                setIsGenerating(false)
+            }
+        }
+    }
+
+    return (
+        <>
+            {/* Version mobile : bouton flottant */}
+            <div className='fixed bottom-6 right-6 z-50 lg:hidden'>
+                <button
+                    onClick={handleDownloadPdf}
+                    disabled={isGenerating}
+                    className='btn btn-accent btn-circle shadow-lg hover:shadow-xl transition-all'
+                    title="Télécharger la facture PDF"
+                >
+                    {isGenerating ? (
+                        <span className="loading loading-spinner loading-sm"></span>
+                    ) : (
+                        <ArrowDownFromLine className="w-5 h-5" />
+                    )}
+                </button>
+            </div>
+
+            {/* Version desktop : affichage normal */}
+            <div className='mt-4 hidden lg:block'>
+                <div className='border-base-300 border-2 border-dashed rounded-xl p-5'>
+                    <button
+                        onClick={handleDownloadPdf}
+                        disabled={isGenerating}
+                        className='btn btn-sm btn-accent mb-4'>
+                        {isGenerating ? 'Génération...' : 'Facture PDF'}
+                        <ArrowDownFromLine className="w-4" />
+                    </button>
+
+                    <div className='p-8 bg-white rounded-lg' ref={factureRef}>
+                        {/* Contenu de la facture (inchangé) */}
+                        <div className='flex justify-between items-center text-sm'>
+                            <div className='flex flex-col'>
+                                <div>
+                                    <div className='flex items-center'>
+                                        <div className='bg-accent-content text-accent rounded-full p-2'>
+                                            <Layers className='h-6 w-6' />
+                                        </div>
+                                        <span className='ml-3 font-bold text-2xl italic'>
+                                            Mon<span className='text-accent'>ity</span>
+                                        </span>
+                                    </div>
+                                </div>
+                                <h1 className='text-7xl font-bold uppercase'>Facture</h1>
+                            </div>
+                            <div className='text-right uppercase'>
+                                <p className='badge badge-ghost'>
+                                    Facture ° {invoice.id}
+                                </p>
+                                <p className='my-2'>
+                                    <strong>Date </strong>
+                                    {formatDate(invoice.invoiceDate)}
+                                </p>
+                                <p>
+                                    <strong>Date d&apos;échéance </strong>
+                                    {formatDate(invoice.dueDate)}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className='my-6 flex justify-between'>
+                            <div>
+                                <p className='badge badge-ghost mb-2'>Émetteur</p>
+                                <p className='text-sm font-bold italic'>{invoice.issuerName}</p>
+                                <p className='text-sm text-gray-500 w-52 break-words'>{invoice.issuerAddress}</p>
+                            </div>
+                            <div className='text-right'>
+                                <p className='badge badge-ghost mb-2'>Client</p>
+                                <p className='text-sm font-bold italic'>{invoice.clientName}</p>
+                                <p className='text-sm text-gray-500 w-52 break-words'>{invoice.clientAddress}</p>
+                            </div>
+                        </div>
+
+                        <div className='overflow-x-auto'>
+                            <table className='table table-zebra'>
+                                <thead>
+                                    <tr>
+                                        <th></th>
+                                        <th>Description</th>
+                                        <th>Quantité</th>
+                                        <th>Prix Unitaire</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {invoice.lines && invoice.lines.length > 0 ? (
+                                        invoice.lines.map((ligne, index) => (
+                                            <tr key={index}>
+                                                <td>{index + 1}</td>
+                                                <td>{ligne.description}</td>
+                                                <td>{ligne.quantity}</td>
+                                                <td>{ligne.unitPrice.toFixed(2)} FCFA</td>
+                                                <td>{(ligne.quantity * ligne.unitPrice).toFixed(2)} FCFA</td>
+                                            </tr>
+                                        ))
+                                    ) : (
+                                        <tr>
+                                            <td colSpan={5} className="text-center">Aucune ligne de facture</td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className='mt-6 space-y-2 text-md'>
+                            <div className='flex justify-between'>
+                                <span className='font-bold'>Total Hors Taxes</span>
+                                <span>{totals.totalHT.toFixed(2)} FCFA</span>
+                            </div>
+
+                            {invoice.vatActive && (
+                                <div className='flex justify-between'>
+                                    <span className='font-bold'>TVA {invoice.vatRate} %</span>
+                                    <span>{totals.totalVAT.toFixed(2)} FCFA</span>
+                                </div>
+                            )}
+
+                            <div className='flex justify-between border-t pt-2 mt-2'>
+                                <span className='font-bold'>Total TTC</span>
+                                <span className='badge badge-accent badge-lg'>
+                                    {totals.totalTTC.toFixed(2)} FCFA
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p className='text-sm text-gray-500 mt-4 text-center'>
+                        💡 Si le PDF est tronqué, diminuez le zoom de la page avant de télécharger
+                    </p>
+                </div>
+            </div>
+        </>
+    )
+}
+
+export default InvoicePDF
