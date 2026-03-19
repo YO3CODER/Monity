@@ -24,8 +24,31 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
         const element = factureRef.current
         if (element) {
             try {
+                // Sauvegarder le style original
+                const originalStyle = {
+                    width: element.style.width,
+                    transform: element.style.transform,
+                    zoom: (element.style as any).zoom
+                }
 
-                const canvas = await html2canvas(element, { scale: 3, useCORS: true })
+                // Forcer une taille fixe pour la capture
+                element.style.width = '800px'
+                element.style.transform = 'none'
+                ;(element.style as any).zoom = '1'
+
+                const canvas = await html2canvas(element, { 
+                    scale: 2,
+                    useCORS: true,
+                    windowWidth: 1200, // Forcer une largeur de fenêtre fixe
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                })
+
+                // Restaurer le style original
+                element.style.width = originalStyle.width
+                element.style.transform = originalStyle.transform
+                ;(element.style as any).zoom = originalStyle.zoom
+
                 const imgData = canvas.toDataURL('image/png')
 
                 const pdf = new jsPDF({
@@ -35,9 +58,26 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                 })
 
                 const pdfWidth = pdf.internal.pageSize.getWidth()
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+                const pdfHeight = pdf.internal.pageSize.getHeight()
+                const imgWidth = pdfWidth
+                const imgHeight = (canvas.height * pdfWidth) / canvas.width
 
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+                let heightLeft = imgHeight
+                let position = 0
+                let page = 1
+
+                // Ajouter la première page
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+                
+                // Ajouter des pages supplémentaires si nécessaire
+                while (heightLeft > pdfHeight) {
+                    position = position - pdfHeight
+                    pdf.addPage()
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+                    heightLeft -= pdfHeight
+                    page++
+                }
+
                 pdf.save(`facture-${invoice.name}.pdf`)
 
                 confetti({
@@ -64,7 +104,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                     <ArrowDownFromLine className="w-4" />
                 </button>
 
-                <div className='p-8' ref={factureRef}>
+                <div className='p-8' ref={factureRef} style={{ zoom: 1 }}>
 
                     <div className='flex justify-between items-center text-sm'>
                         <div className='flex flex-col'>
