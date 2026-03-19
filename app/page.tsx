@@ -3,7 +3,7 @@
 import Wrapper from "./components/Wrapper";
 import { Layers } from "lucide-react";
 import { useEffect, useState } from "react";
-import { createEmptyInvoice, getInvoices } from "./actions"; // Changé ici !
+import { createEmptyInvoice, getInvoices } from "./actions";
 import { useUser, SignInButton } from "@clerk/nextjs";
 import confetti from "canvas-confetti";
 import { Invoice } from "@/type";
@@ -19,7 +19,7 @@ export default function Home() {
   const fetchInvoices = async () => {
     try {
       setLoading(true);
-      const data = await getInvoices(); // Plus besoin de email !
+      const data = await getInvoices();
       setInvoices(data);
     } catch (error) {
       console.error("Erreur lors du chargement des factures", error);
@@ -44,7 +44,7 @@ export default function Home() {
     try {
       if (!isSignedIn) return;
       
-      await createEmptyInvoice(invoiceName); // Plus que le nom en paramètre !
+      await createEmptyInvoice(invoiceName);
       await fetchInvoices();
       setInvoiceName("");
       
@@ -95,7 +95,7 @@ export default function Home() {
           
           <SignInButton mode="modal">
             <button className="btn btn-accent btn-lg">
-              Se connecter / S'inscrire
+              Se connecter / S&apos;inscrire
             </button>
           </SignInButton>
           
