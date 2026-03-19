@@ -24,27 +24,29 @@ type DeletedInvoice = {
 };
 
 // Fonction de transformation pour DeletedInvoice
-function toDeletedInvoice(data: any): DeletedInvoice | null {
-  if (!data) return null;
+// Version avec unknown (plus sûr que any)
+function toDeletedInvoice(data: unknown): DeletedInvoice | null {
+  if (!data || typeof data !== 'object') return null;
+  
+  const d = data as Record<string, unknown>;
   
   return {
-    id: data.id,
-    name: data.name,
-    userId: data.userId,
-    issuerName: data.issuerName,
-    issuerAddress: data.issuerAddress,
-    clientName: data.clientName,
-    clientAddress: data.clientAddress,
-    invoiceDate: data.invoiceDate,
-    dueDate: data.dueDate,
-    vatActive: data.vatActive,
-    vatRate: data.vatRate,
-    status: data.status,
-    createdAt: data.createdAt,
-    updatedAt: data.updatedAt
+    id: d.id as string,
+    name: d.name as string,
+    userId: d.userId as string,
+    issuerName: d.issuerName as string,
+    issuerAddress: d.issuerAddress as string,
+    clientName: d.clientName as string,
+    clientAddress: d.clientAddress as string,
+    invoiceDate: d.invoiceDate as string,
+    dueDate: d.dueDate as string,
+    vatActive: d.vatActive as boolean,
+    vatRate: d.vatRate as number,
+    status: d.status as number,
+    createdAt: d.createdAt as Date,
+    updatedAt: d.updatedAt as Date
   };
 }
-
 /* =========================
    UTILISATEUR
 ========================= */
