@@ -35,7 +35,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                     useCORS: true,
                     logging: false,
                     allowTaint: false,
-                    windowWidth: 1200 // Force une largeur fixe pour le rendu
+                    windowWidth: 1200
                 })
                 
                 const imgData = canvas.toDataURL('image/png')
@@ -70,38 +70,43 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
 
     return (
         <>
-            {/* Version mobile : bouton flottant */}
+            {/* Bouton flottant pour MOBILE */}
             <div className='fixed bottom-6 right-6 z-50 lg:hidden'>
                 <button
                     onClick={handleDownloadPdf}
                     disabled={isGenerating}
-                    className='btn btn-accent btn-circle shadow-lg hover:shadow-xl transition-all'
+                    className='btn btn-accent btn-circle shadow-lg hover:shadow-xl transition-all w-14 h-14'
                     title="Télécharger la facture PDF"
                 >
                     {isGenerating ? (
-                        <span className="loading loading-spinner loading-sm"></span>
+                        <span className="loading loading-spinner loading-md"></span>
                     ) : (
-                        <ArrowDownFromLine className="w-5 h-5" />
+                        <ArrowDownFromLine className="w-6 h-6" />
                     )}
                 </button>
             </div>
 
-            {/* Version desktop : affichage normal */}
-            <div className='mt-4 hidden lg:block'>
-                <div className='border-base-300 border-2 border-dashed rounded-xl p-5'>
-                    <button
-                        onClick={handleDownloadPdf}
-                        disabled={isGenerating}
-                        className='btn btn-sm btn-accent mb-4'>
-                        {isGenerating ? 'Génération...' : 'Facture PDF'}
-                        <ArrowDownFromLine className="w-4" />
-                    </button>
+            {/* Conteneur principal - visible sur TOUS les écrans */}
+            <div className='mt-4 w-full'>
+                <div className='border-base-300 border-2 border-dashed rounded-xl p-3 sm:p-5'>
+                    
+                    {/* Bouton pour DESKTOP uniquement */}
+                    <div className='hidden lg:flex justify-end mb-4'>
+                        <button
+                            onClick={handleDownloadPdf}
+                            disabled={isGenerating}
+                            className='btn btn-sm btn-accent'>
+                            {isGenerating ? 'Génération...' : 'Facture PDF'}
+                            <ArrowDownFromLine className="w-4 ml-2" />
+                        </button>
+                    </div>
 
-                    <div className='p-8 bg-white rounded-lg' ref={factureRef}>
-                        {/* Contenu de la facture (inchangé) */}
-                        <div className='flex justify-between items-center text-sm'>
-                            <div className='flex flex-col'>
-                                <div>
+                    {/* Facture - toujours visible avec style responsive */}
+                    <div className='bg-white rounded-lg overflow-x-auto' ref={factureRef}>
+                        <div className='p-4 sm:p-8 min-w-[320px]'>
+                            {/* En-tête responsive */}
+                            <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm'>
+                                <div className='flex flex-col w-full sm:w-auto'>
                                     <div className='flex items-center'>
                                         <div className='bg-accent-content text-accent rounded-full p-2'>
                                             <Layers className='h-6 w-6' />
@@ -110,86 +115,91 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                                             Mon<span className='text-accent'>ity</span>
                                         </span>
                                     </div>
+                                    <h1 className='text-4xl sm:text-7xl font-bold uppercase mt-2'>Facture</h1>
                                 </div>
-                                <h1 className='text-7xl font-bold uppercase'>Facture</h1>
+                                <div className='text-left sm:text-right uppercase w-full sm:w-auto'>
+                                    <p className='badge badge-ghost mb-2'>
+                                        Facture ° {invoice.id}
+                                    </p>
+                                    <p className='my-1'>
+                                        <strong>Date </strong>
+                                        {formatDate(invoice.invoiceDate)}
+                                    </p>
+                                    <p>
+                                        <strong>Date d&apos;échéance </strong>
+                                        {formatDate(invoice.dueDate)}
+                                    </p>
+                                </div>
                             </div>
-                            <div className='text-right uppercase'>
-                                <p className='badge badge-ghost'>
-                                    Facture ° {invoice.id}
-                                </p>
-                                <p className='my-2'>
-                                    <strong>Date </strong>
-                                    {formatDate(invoice.invoiceDate)}
-                                </p>
-                                <p>
-                                    <strong>Date d&apos;échéance </strong>
-                                    {formatDate(invoice.dueDate)}
-                                </p>
-                            </div>
-                        </div>
 
-                        <div className='my-6 flex justify-between'>
-                            <div>
-                                <p className='badge badge-ghost mb-2'>Émetteur</p>
-                                <p className='text-sm font-bold italic'>{invoice.issuerName}</p>
-                                <p className='text-sm text-gray-500 w-52 break-words'>{invoice.issuerAddress}</p>
+                            {/* Émetteur et Client responsive */}
+                            <div className='my-6 flex flex-col sm:flex-row justify-between gap-4'>
+                                <div>
+                                    <p className='badge badge-ghost mb-2'>Émetteur</p>
+                                    <p className='text-sm font-bold italic'>{invoice.issuerName}</p>
+                                    <p className='text-sm text-gray-500 break-words max-w-xs'>{invoice.issuerAddress}</p>
+                                </div>
+                                <div className='sm:text-right'>
+                                    <p className='badge badge-ghost mb-2'>Client</p>
+                                    <p className='text-sm font-bold italic'>{invoice.clientName}</p>
+                                    <p className='text-sm text-gray-500 break-words max-w-xs'>{invoice.clientAddress}</p>
+                                </div>
                             </div>
-                            <div className='text-right'>
-                                <p className='badge badge-ghost mb-2'>Client</p>
-                                <p className='text-sm font-bold italic'>{invoice.clientName}</p>
-                                <p className='text-sm text-gray-500 w-52 break-words'>{invoice.clientAddress}</p>
-                            </div>
-                        </div>
 
-                        <div className='overflow-x-auto'>
-                            <table className='table table-zebra'>
-                                <thead>
-                                    <tr>
-                                        <th></th>
-                                        <th>Description</th>
-                                        <th>Quantité</th>
-                                        <th>Prix Unitaire</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {invoice.lines && invoice.lines.length > 0 ? (
-                                        invoice.lines.map((ligne, index) => (
-                                            <tr key={index}>
-                                                <td>{index + 1}</td>
-                                                <td>{ligne.description}</td>
-                                                <td>{ligne.quantity}</td>
-                                                <td>{ligne.unitPrice.toFixed(2)} FCFA</td>
-                                                <td>{(ligne.quantity * ligne.unitPrice).toFixed(2)} FCFA</td>
+                            {/* Tableau responsive */}
+                            <div className='overflow-x-auto -mx-4 sm:mx-0'>
+                                <div className='inline-block min-w-full align-middle'>
+                                    <table className='table table-zebra w-full'>
+                                        <thead>
+                                            <tr>
+                                                <th className='text-xs sm:text-sm'></th>
+                                                <th className='text-xs sm:text-sm'>Description</th>
+                                                <th className='text-xs sm:text-sm'>Qté</th>
+                                                <th className='text-xs sm:text-sm'>Prix Unitaire</th>
+                                                <th className='text-xs sm:text-sm'>Total</th>
                                             </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={5} className="text-center">Aucune ligne de facture</td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div className='mt-6 space-y-2 text-md'>
-                            <div className='flex justify-between'>
-                                <span className='font-bold'>Total Hors Taxes</span>
-                                <span>{totals.totalHT.toFixed(2)} FCFA</span>
+                                        </thead>
+                                        <tbody>
+                                            {invoice.lines && invoice.lines.length > 0 ? (
+                                                invoice.lines.map((ligne, index) => (
+                                                    <tr key={index}>
+                                                        <td className='text-xs sm:text-sm'>{index + 1}</td>
+                                                        <td className='text-xs sm:text-sm'>{ligne.description}</td>
+                                                        <td className='text-xs sm:text-sm'>{ligne.quantity}</td>
+                                                        <td className='text-xs sm:text-sm'>{ligne.unitPrice.toFixed(2)} FCFA</td>
+                                                        <td className='text-xs sm:text-sm'>{(ligne.quantity * ligne.unitPrice).toFixed(2)} FCFA</td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={5} className="text-center text-xs sm:text-sm">Aucune ligne de facture</td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
 
-                            {invoice.vatActive && (
+                            {/* Totaux */}
+                            <div className='mt-6 space-y-2 text-sm sm:text-md'>
                                 <div className='flex justify-between'>
-                                    <span className='font-bold'>TVA {invoice.vatRate} %</span>
-                                    <span>{totals.totalVAT.toFixed(2)} FCFA</span>
+                                    <span className='font-bold'>Total Hors Taxes</span>
+                                    <span>{totals.totalHT.toFixed(2)} FCFA</span>
                                 </div>
-                            )}
 
-                            <div className='flex justify-between border-t pt-2 mt-2'>
-                                <span className='font-bold'>Total TTC</span>
-                                <span className='badge badge-accent badge-lg'>
-                                    {totals.totalTTC.toFixed(2)} FCFA
-                                </span>
+                                {invoice.vatActive && (
+                                    <div className='flex justify-between'>
+                                        <span className='font-bold'>TVA {invoice.vatRate} %</span>
+                                        <span>{totals.totalVAT.toFixed(2)} FCFA</span>
+                                    </div>
+                                )}
+
+                                <div className='flex justify-between border-t pt-2 mt-2'>
+                                    <span className='font-bold'>Total TTC</span>
+                                    <span className='badge badge-accent badge-sm sm:badge-lg'>
+                                        {totals.totalTTC.toFixed(2)} FCFA
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
