@@ -6,7 +6,7 @@ import confetti from 'canvas-confetti'
 import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
 import { ArrowDownFromLine, Layers } from 'lucide-react'
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useEffect } from 'react'
 
 interface FacturePDFProps {
     invoice: Invoice
@@ -23,6 +23,11 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
 
     const factureRef = useRef<HTMLDivElement>(null)
     const [isGenerating, setIsGenerating] = useState(false)
+    const [isClient, setIsClient] = useState(false)
+
+    useEffect(() => {
+        setIsClient(true)
+    }, [])
 
     const handleDownloadPdf = async () => {
         const element = factureRef.current
@@ -68,148 +73,142 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
         }
     }
 
+    if (!isClient) {
+        return <div className="p-4">Chargement...</div>
+    }
+
     return (
-        <>
-            {/* Bouton flottant pour MOBILE */}
-            <div className='fixed bottom-6 right-6 z-50 lg:hidden'>
+        <div className="w-full">
+            {/* Version mobile : bouton en bas de l'écran */}
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 p-4 bg-base-100 border-t border-base-300 shadow-lg">
                 <button
                     onClick={handleDownloadPdf}
                     disabled={isGenerating}
-                    className='btn btn-accent btn-circle shadow-lg hover:shadow-xl transition-all w-14 h-14'
-                    title="Télécharger la facture PDF"
+                    className="btn btn-accent w-full"
                 >
                     {isGenerating ? (
-                        <span className="loading loading-spinner loading-md"></span>
+                        <>
+                            <span className="loading loading-spinner loading-sm"></span>
+                            Génération en cours...
+                        </>
                     ) : (
-                        <ArrowDownFromLine className="w-6 h-6" />
+                        <>
+                            <ArrowDownFromLine className="w-4 mr-2" />
+                            Télécharger la facture
+                        </>
                     )}
                 </button>
             </div>
 
-            {/* Conteneur principal - visible sur TOUS les écrans */}
-            <div className='mt-4 w-full'>
-                <div className='border-base-300 border-2 border-dashed rounded-xl p-3 sm:p-5'>
+            {/* Contenu de la facture - TOUJOURS visible */}
+            <div className="pb-24 lg:pb-0"> {/* Padding bottom pour éviter que le bouton mobile cache le contenu */}
+                <div className="border-base-300 border-2 border-dashed rounded-xl p-3 sm:p-5">
                     
-                    {/* Bouton pour DESKTOP uniquement */}
-                    <div className='hidden lg:flex justify-end mb-4'>
+                    {/* Bouton desktop - visible seulement sur desktop */}
+                    <div className="hidden lg:flex justify-end mb-4">
                         <button
                             onClick={handleDownloadPdf}
                             disabled={isGenerating}
-                            className='btn btn-sm btn-accent'>
+                            className="btn btn-sm btn-accent"
+                        >
                             {isGenerating ? 'Génération...' : 'Facture PDF'}
                             <ArrowDownFromLine className="w-4 ml-2" />
                         </button>
                     </div>
 
-                    {/* Facture - toujours visible avec style responsive */}
-                    <div className='bg-white rounded-lg overflow-x-auto' ref={factureRef}>
-                        <div className='p-4 sm:p-8 min-w-[320px]'>
-                            {/* En-tête responsive */}
-                            <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm'>
-                                <div className='flex flex-col w-full sm:w-auto'>
-                                    <div className='flex items-center'>
-                                        <div className='bg-accent-content text-accent rounded-full p-2'>
-                                            <Layers className='h-6 w-6' />
-                                        </div>
-                                        <span className='ml-3 font-bold text-2xl italic'>
-                                            Mon<span className='text-accent'>ity</span>
-                                        </span>
+                    {/* La facture */}
+                    <div ref={factureRef} className="bg-white rounded-lg p-4 sm:p-6">
+                        {/* En-tête */}
+                        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-6">
+                            <div>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="bg-accent-content text-accent rounded-full p-2">
+                                        <Layers className="h-6 w-6" />
                                     </div>
-                                    <h1 className='text-4xl sm:text-7xl font-bold uppercase mt-2'>Facture</h1>
-                                </div>
-                                <div className='text-left sm:text-right uppercase w-full sm:w-auto'>
-                                    <p className='badge badge-ghost mb-2'>
-                                        Facture ° {invoice.id}
-                                    </p>
-                                    <p className='my-1'>
-                                        <strong>Date </strong>
-                                        {formatDate(invoice.invoiceDate)}
-                                    </p>
-                                    <p>
-                                        <strong>Date d&apos;échéance </strong>
-                                        {formatDate(invoice.dueDate)}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Émetteur et Client responsive */}
-                            <div className='my-6 flex flex-col sm:flex-row justify-between gap-4'>
-                                <div>
-                                    <p className='badge badge-ghost mb-2'>Émetteur</p>
-                                    <p className='text-sm font-bold italic'>{invoice.issuerName}</p>
-                                    <p className='text-sm text-gray-500 break-words max-w-xs'>{invoice.issuerAddress}</p>
-                                </div>
-                                <div className='sm:text-right'>
-                                    <p className='badge badge-ghost mb-2'>Client</p>
-                                    <p className='text-sm font-bold italic'>{invoice.clientName}</p>
-                                    <p className='text-sm text-gray-500 break-words max-w-xs'>{invoice.clientAddress}</p>
-                                </div>
-                            </div>
-
-                            {/* Tableau responsive */}
-                            <div className='overflow-x-auto -mx-4 sm:mx-0'>
-                                <div className='inline-block min-w-full align-middle'>
-                                    <table className='table table-zebra w-full'>
-                                        <thead>
-                                            <tr>
-                                                <th className='text-xs sm:text-sm'></th>
-                                                <th className='text-xs sm:text-sm'>Description</th>
-                                                <th className='text-xs sm:text-sm'>Qté</th>
-                                                <th className='text-xs sm:text-sm'>Prix Unitaire</th>
-                                                <th className='text-xs sm:text-sm'>Total</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {invoice.lines && invoice.lines.length > 0 ? (
-                                                invoice.lines.map((ligne, index) => (
-                                                    <tr key={index}>
-                                                        <td className='text-xs sm:text-sm'>{index + 1}</td>
-                                                        <td className='text-xs sm:text-sm'>{ligne.description}</td>
-                                                        <td className='text-xs sm:text-sm'>{ligne.quantity}</td>
-                                                        <td className='text-xs sm:text-sm'>{ligne.unitPrice.toFixed(2)} FCFA</td>
-                                                        <td className='text-xs sm:text-sm'>{(ligne.quantity * ligne.unitPrice).toFixed(2)} FCFA</td>
-                                                    </tr>
-                                                ))
-                                            ) : (
-                                                <tr>
-                                                    <td colSpan={5} className="text-center text-xs sm:text-sm">Aucune ligne de facture</td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
-                            {/* Totaux */}
-                            <div className='mt-6 space-y-2 text-sm sm:text-md'>
-                                <div className='flex justify-between'>
-                                    <span className='font-bold'>Total Hors Taxes</span>
-                                    <span>{totals.totalHT.toFixed(2)} FCFA</span>
-                                </div>
-
-                                {invoice.vatActive && (
-                                    <div className='flex justify-between'>
-                                        <span className='font-bold'>TVA {invoice.vatRate} %</span>
-                                        <span>{totals.totalVAT.toFixed(2)} FCFA</span>
-                                    </div>
-                                )}
-
-                                <div className='flex justify-between border-t pt-2 mt-2'>
-                                    <span className='font-bold'>Total TTC</span>
-                                    <span className='badge badge-accent badge-sm sm:badge-lg'>
-                                        {totals.totalTTC.toFixed(2)} FCFA
+                                    <span className="font-bold text-2xl italic">
+                                        Mon<span className="text-accent">ity</span>
                                     </span>
                                 </div>
+                                <h1 className="text-4xl sm:text-7xl font-bold uppercase">FACTURE</h1>
+                            </div>
+                            <div className="text-left sm:text-right">
+                                <p className="badge badge-ghost mb-2">
+                                    N° {invoice.id}
+                                </p>
+                                <p className="text-sm">
+                                    <span className="font-bold">Date:</span> {formatDate(invoice.invoiceDate)}
+                                </p>
+                                <p className="text-sm">
+                                    <span className="font-bold">Échéance:</span> {formatDate(invoice.dueDate)}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Émetteur / Client */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <p className="badge badge-ghost mb-2">ÉMETTEUR</p>
+                                <p className="font-bold">{invoice.issuerName}</p>
+                                <p className="text-sm text-gray-600">{invoice.issuerAddress}</p>
+                            </div>
+                            <div className="sm:text-right">
+                                <p className="badge badge-ghost mb-2">CLIENT</p>
+                                <p className="font-bold">{invoice.clientName}</p>
+                                <p className="text-sm text-gray-600">{invoice.clientAddress}</p>
+                            </div>
+                        </div>
+
+                        {/* Lignes de facture */}
+                        <div className="overflow-x-auto mb-6">
+                            <table className="table table-zebra w-full">
+                                <thead>
+                                    <tr>
+                                        <th className="text-xs">#</th>
+                                        <th className="text-xs">Description</th>
+                                        <th className="text-xs text-right">Qté</th>
+                                        <th className="text-xs text-right">Prix unit.</th>
+                                        <th className="text-xs text-right">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {invoice.lines?.map((line, index) => (
+                                        <tr key={index}>
+                                            <td className="text-xs">{index + 1}</td>
+                                            <td className="text-xs">{line.description}</td>
+                                            <td className="text-xs text-right">{line.quantity}</td>
+                                            <td className="text-xs text-right">{line.unitPrice.toFixed(0)} F</td>
+                                            <td className="text-xs text-right">{(line.quantity * line.unitPrice).toFixed(0)} F</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Totaux */}
+                        <div className="space-y-2 border-t pt-4">
+                            <div className="flex justify-between text-sm">
+                                <span>Total HT</span>
+                                <span className="font-medium">{totals.totalHT.toFixed(0)} FCFA</span>
+                            </div>
+                            {invoice.vatActive && (
+                                <div className="flex justify-between text-sm">
+                                    <span>TVA {invoice.vatRate}%</span>
+                                    <span className="font-medium">{totals.totalVAT.toFixed(0)} FCFA</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between font-bold text-base border-t pt-2">
+                                <span>TOTAL TTC</span>
+                                <span className="badge badge-accent badge-lg">{totals.totalTTC.toFixed(0)} FCFA</span>
                             </div>
                         </div>
                     </div>
 
-                    <p className='text-sm text-gray-500 mt-4 text-center'>
-                        💡 Si le PDF est tronqué, diminuez le zoom de la page avant de télécharger
+                    <p className="text-xs text-gray-500 text-center mt-4">
+                        💡 Si le PDF est mal généré, essayez de zoomer moins sur la page
                     </p>
                 </div>
             </div>
-        </>
+        </div>
     )
 }
 
