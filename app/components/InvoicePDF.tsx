@@ -20,7 +20,6 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
 
     const factureRef = useRef<HTMLDivElement>(null)
 
-
     const handleDownloadPdf = async () => {
         const element = factureRef.current
         if (element) {
@@ -60,7 +59,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
 
                 <button
                     onClick={handleDownloadPdf}
-                    className='btn btn-sm btn-accent mb4'>
+                    className='btn btn-sm btn-accent mb-4'>
                     Facture PDF
                     <ArrowDownFromLine className="w-4" />
                 </button>
@@ -72,7 +71,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                             <div>
                                 <div className='flex items-center'>
 
-                                    <div className='bg-accent-content text-accent  rounded-full p-2'>
+                                    <div className='bg-accent-content text-accent rounded-full p-2'>
                                         <Layers className='h-6 w-6' />
                                     </div>
                                     <span className='ml-3 font-bold text-2xl italic'>
@@ -91,7 +90,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                                 {formatDate(invoice.invoiceDate)}
                             </p>
                             <p>
-                                <strong>Date d'échéance </strong>
+                                <strong>Date d&apos;échéance </strong>
                                 {formatDate(invoice.dueDate)}
                             </p>
                         </div>
@@ -165,8 +164,6 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                                 {totals.totalTTC.toFixed(2)} €
                             </div>
                         </div>
-
-
                     </div>
 
                 </div>

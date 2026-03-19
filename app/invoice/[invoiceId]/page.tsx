@@ -8,7 +8,7 @@ import Wrapper from '@/app/components/Wrapper'
 import { Invoice, Totals } from '@/type'
 import { Save, Trash } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 
 const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
@@ -19,7 +19,7 @@ const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const router = useRouter();
 
-  const fetchInvoice = async () => {
+  const fetchInvoice = useCallback(async () => {
     try {
       const { invoiceId } = await params
       const fetchedInvoice = await getInvoiceById(invoiceId)
@@ -30,11 +30,11 @@ const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
     } catch (error) {
       console.error(error)
     }
-  }
+  }, [params])
 
   useEffect(() => {
     fetchInvoice()
-  }, [])
+  }, [fetchInvoice])
 
   useEffect(() => {
     if (!invoice) return;
@@ -72,6 +72,7 @@ const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
       setIsLoading(false)
     } catch (error) {
       console.error("Erreur lors de la sauvegarde de la facture :", error);
+      setIsLoading(false)
     }
   }
 
@@ -86,7 +87,10 @@ const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
 
   if (!invoice || !totals) return (
     <div className='flex justify-center items-center h-screen w-full'>
-      <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500'></div>
+      <div className='flex flex-col items-center gap-4'>
+        <span className="loading loading-spinner loading-lg text-yellow-500"></span>
+        <span className='text-gray-600 font-medium'>Chargement de la facture...</span>
+      </div>
     </div>
   )
 
@@ -98,7 +102,7 @@ const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
             <p className='badge badge-ghost badge-lg uppercase'>
               <span>Facture-</span>{invoice?.id}
             </p>
-            <div className='flex md:mt-0 mt-4'>
+            <div className='flex md:mt-0 mt-4 gap-2'>
               <select
                 className='select select-sm select-bordered w-full'
                 value={invoice?.status}
@@ -112,7 +116,7 @@ const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
               </select>
 
               <button 
-                className='btn btn-sm btn-accent ml-4'
+                className='btn btn-sm btn-accent'
                 disabled={isSaveDisabled || isLoading}
                 onClick={handleSave}
               >
@@ -128,14 +132,14 @@ const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
 
               <button
                 onClick={() => setShowDeleteModal(true)}
-                className='btn btn-sm btn-error ml-4'
+                className='btn btn-sm btn-error'
               >
                 <Trash className='w-4' />
               </button>
             </div>
           </div>
 
-          <div className='flex flex-col md:flex-row w-full'>
+          <div className='flex flex-col md:flex-row w-full gap-4'>
             <div className='flex w-full md:w-1/3 flex-col'>
               <div className='mb-4 bg-base-200 rounded-xl p-7'>
                 <div className='flex justify-between items-center mb-4'>
@@ -162,7 +166,7 @@ const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
               <InvoiceInfo invoice={invoice} setInvoice={setInvoice} />
             </div>
 
-            <div className='flex w-full md:w-2/3 flex-col md:ml-4'>
+            <div className='flex w-full md:w-2/3 flex-col'>
               <InvoiceLines invoice={invoice} setInvoice={setInvoice} />
               <InvoicePDF invoice={invoice} totals={totals} />
             </div>
