@@ -10,250 +10,20 @@ interface FacturePDFProps {
     totals: Totals
 }
 
+interface FactureContentProps {
+    invoice: Invoice
+    totals: Totals
+    formatDate: (dateString: string) => string
+    isDesktop?: boolean
+}
+
 function formatDate(dateString: string): string {
     const date = new Date(dateString);
     const options: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' };
     return date.toLocaleDateString('fr-FR', options);
 }
 
-const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
-
-    const mobileFactureRef = useRef<HTMLDivElement>(null)
-    const desktopFactureRef = useRef<HTMLDivElement>(null)
-    const [isGenerating, setIsGenerating] = useState(false)
-    const [isViewMode, setIsViewMode] = useState(false)
-
-    const generatePDF = async (): Promise<jsPDF | null> => {
-        const isMobile = window.innerWidth < 1024
-        const element = isMobile ? mobileFactureRef.current : desktopFactureRef.current
-        
-        if (!element) {
-            throw new Error("Élément non trouvé")
-        }
-
-        // Obtenir les dimensions réelles de l'élément
-        const originalHeight = element.scrollHeight
-        const originalWidth = element.scrollWidth
-        const originalOverflow = element.style.overflow
-        const originalMaxHeight = element.style.maxHeight
-
-        // Forcer l'affichage complet sans défilement
-        element.style.overflow = 'visible'
-        element.style.maxHeight = 'none'
-        element.style.height = 'auto'
-
-        try {
-            const canvas = await html2canvas(element, { 
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                allowTaint: false,
-                backgroundColor: '#ffffff',
-                windowWidth: isMobile ? Math.max(375, originalWidth) : Math.max(1200, originalWidth),
-                windowHeight: originalHeight, // Spécifier la hauteur totale
-                height: originalHeight, // Capturer toute la hauteur
-                onclone: (clonedDoc, clonedElement) => {
-                    clonedElement.style.display = 'block'
-                    clonedElement.style.overflow = 'visible'
-                    clonedElement.style.maxHeight = 'none'
-                    clonedElement.style.height = 'auto'
-                }
-            })
-            
-            const imgData = canvas.toDataURL('image/png', 1.0)
-
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "A4"
-            })
-
-            const pdfWidth = pdf.internal.pageSize.getWidth()
-            
-            // Calculer la hauteur du PDF proportionnellement à la largeur
-            // pour conserver les proportions de l'image
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width
-
-            // Si la hauteur dépasse la page A4, on crée plusieurs pages
-            let heightLeft = pdfHeight
-            let position = 0
-            let page = 1
-
-            // Ajouter la première page
-            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST')
-            
-            // Si l'image est plus haute qu'une page, on ajoute des pages supplémentaires
-            while (heightLeft > pdf.internal.pageSize.getHeight()) {
-                position = position - pdf.internal.pageSize.getHeight()
-                pdf.addPage()
-                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST')
-                heightLeft -= pdf.internal.pageSize.getHeight()
-                page++
-            }
-            
-            return pdf
-        } finally {
-            // Restaurer les styles originaux
-            element.style.overflow = originalOverflow
-            element.style.maxHeight = originalMaxHeight
-            element.style.height = ''
-        }
-    }
-
-    const handleDownloadPdf = async () => {
-        if (isGenerating) return
-        
-        try {
-            setIsGenerating(true)
-            const pdf = await generatePDF()
-            if (pdf) {
-                pdf.save(`facture-${invoice.name || invoice.id}.pdf`)
-                confetti({
-                    particleCount: 100,
-                    spread: 70,
-                    origin: { y: 0.6 },
-                    zIndex: 9999
-                })
-            }
-        } catch (error) {
-            console.error('Erreur lors de la génération du PDF :', error);
-            alert('Une erreur est survenue lors de la génération du PDF');
-        } finally {
-            setIsGenerating(false)
-        }
-    }
-
-    const handleViewPdf = async () => {
-        if (isGenerating) return
-        
-        try {
-            setIsGenerating(true)
-            const pdf = await generatePDF()
-            if (pdf) {
-                const pdfBlob = pdf.output('blob')
-                const pdfUrl = URL.createObjectURL(pdfBlob)
-                window.open(pdfUrl, '_blank')
-                setTimeout(() => URL.revokeObjectURL(pdfUrl), 100)
-            }
-        } catch (error) {
-            console.error('Erreur lors de la génération du PDF :', error);
-            alert('Une erreur est survenue lors de la génération du PDF');
-        } finally {
-            setIsGenerating(false)
-        }
-    }
-
-    const toggleViewMode = () => {
-        setIsViewMode(!isViewMode)
-    }
-
-    return (
-    <>
-        {/* Version mobile */}
-        <div className='mt-4 block lg:hidden'>
-            <div className='border-base-300 border-2 border-dashed rounded-xl p-4'>
-                {/* Barre d'outils mobile */}
-                <div className='flex gap-2 mb-4'>
-                    <button
-                        onClick={handleDownloadPdf}
-                        disabled={isGenerating}
-                        className='btn btn-sm btn-accent flex-1'>
-                        <Download className="w-4 mr-1" />
-                        {isGenerating ? 'Génération...' : 'Télécharger'}
-                    </button>
-                    <button
-                        onClick={handleViewPdf}
-                        disabled={isGenerating}
-                        className='btn btn-sm btn-primary flex-1'>
-                        <Eye className="w-4 mr-1" />
-                        {isGenerating ? 'Génération...' : 'Visualiser'}
-                    </button>
-                </div>
-
-                {/* Bouton plein écran */}
-                <button
-                    onClick={toggleViewMode}
-                    className='btn btn-xs btn-ghost w-full mb-2 text-xs'>
-                    {isViewMode ? 'Réduire' : 'Voir en plein écran'}
-                </button>
-
-                {/* Mode plein écran */}
-                {isViewMode ? (
-                    <div className='fixed inset-0 z-50 bg-white overflow-y-auto'>
-                        <div className='sticky top-0 bg-white border-b p-2 flex justify-between items-center z-10'>
-                            <h2 className='font-bold'>Aperçu facture</h2>
-                            <div className='flex gap-2'>
-                                <button
-                                    onClick={handleDownloadPdf}
-                                    disabled={isGenerating}
-                                    className='btn btn-xs btn-accent'>
-                                    <Download className="w-3" />
-                                </button>
-                                <button
-                                    onClick={toggleViewMode}
-                                    className='btn btn-xs btn-ghost'>
-                                    ✕
-                                </button>
-                            </div>
-                        </div>
-                        <div className='p-4 bg-white' ref={mobileFactureRef}>
-                            {/* Contenu de la facture */}
-                            <FactureContent invoice={invoice} totals={totals} formatDate={formatDate} />
-                        </div>
-                    </div>
-                ) : (
-                    /* Mode normal (aperçu) */
-                    <div className='p-4 bg-white rounded-lg max-h-[600px] overflow-y-auto' ref={mobileFactureRef}>
-                        <FactureContent invoice={invoice} totals={totals} formatDate={formatDate} />
-                    </div>
-                )}
-
-                <p className='text-xs text-gray-500 mt-3 text-center'>
-                    💡 Le PDF généré inclura toute la facture
-                </p>
-            </div>
-        </div>
-
-        {/* Version desktop */}
-        <div className='mt-4 hidden lg:block'>
-            <div className='border-base-300 border-2 border-dashed rounded-xl p-5'>
-                <div className='flex gap-2 mb-4'>
-                    <button
-                        onClick={handleDownloadPdf}
-                        disabled={isGenerating}
-                        className='btn btn-sm btn-accent'>
-                        {isGenerating ? 'Génération...' : 'Facture PDF'}
-                        <Download className="w-4" />
-                    </button>
-                    <button
-                        onClick={handleViewPdf}
-                        disabled={isGenerating}
-                        className='btn btn-sm btn-primary'>
-                        Visualiser
-                        <Eye className="w-4" />
-                    </button>
-                </div>
-
-                <div className='p-8 bg-white rounded-lg max-h-[800px] overflow-y-auto' ref={desktopFactureRef}>
-                    <FactureContent 
-                        invoice={invoice} 
-                        totals={totals} 
-                        formatDate={formatDate} 
-                        isDesktop={true} 
-                    />
-                </div>
-
-                <p className='text-sm text-gray-500 mt-4 text-center'>
-                    💡 Le PDF généré inclura toute la facture
-                </p>
-            </div>
-        </div>
-    </>
-)
-}
-
-// Composant séparé pour le contenu de la facture (évite la duplication)
-const FactureContent = ({ invoice, totals, formatDate, isDesktop = false }) => {
+const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, formatDate, isDesktop = false }) => {
     if (isDesktop) {
         return (
             <>
@@ -312,7 +82,7 @@ const FactureContent = ({ invoice, totals, formatDate, isDesktop = false }) => {
                         </thead>
                         <tbody>
                             {invoice.lines && invoice.lines.length > 0 ? (
-                                invoice.lines.map((ligne, index) => (
+                                invoice.lines.map((ligne: { description: string; quantity: number; unitPrice: number }, index: number) => (
                                     <tr key={index}>
                                         <td>{index + 1}</td>
                                         <td>{ligne.description}</td>
@@ -413,7 +183,7 @@ const FactureContent = ({ invoice, totals, formatDate, isDesktop = false }) => {
                     </thead>
                     <tbody>
                         {invoice.lines && invoice.lines.length > 0 ? (
-                            invoice.lines.map((ligne, index) => (
+                            invoice.lines.map((ligne: { description: string; quantity: number; unitPrice: number }, index: number) => (
                                 <tr key={index} className='text-xs'>
                                     <td>{index + 1}</td>
                                     <td className='max-w-[100px] truncate' title={ligne.description}>
@@ -457,6 +227,238 @@ const FactureContent = ({ invoice, totals, formatDate, isDesktop = false }) => {
             </div>
         </>
     )
+}
+
+const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
+
+    const mobileFactureRef = useRef<HTMLDivElement>(null)
+    const desktopFactureRef = useRef<HTMLDivElement>(null)
+    const [isGenerating, setIsGenerating] = useState<boolean>(false)
+    const [isViewMode, setIsViewMode] = useState<boolean>(false)
+
+    const generatePDF = async (): Promise<jsPDF | null> => {
+        const isMobile = window.innerWidth < 1024
+        const element = isMobile ? mobileFactureRef.current : desktopFactureRef.current
+        
+        if (!element) {
+            throw new Error("Élément non trouvé")
+        }
+
+        // Obtenir les dimensions réelles de l'élément
+        const originalHeight = element.scrollHeight
+        const originalWidth = element.scrollWidth
+        const originalOverflow = element.style.overflow
+        const originalMaxHeight = element.style.maxHeight
+
+        // Forcer l'affichage complet sans défilement
+        element.style.overflow = 'visible'
+        element.style.maxHeight = 'none'
+        element.style.height = 'auto'
+
+        try {
+            const canvas = await html2canvas(element, { 
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                allowTaint: false,
+                backgroundColor: '#ffffff',
+                windowWidth: isMobile ? Math.max(375, originalWidth) : Math.max(1200, originalWidth),
+                windowHeight: originalHeight,
+                height: originalHeight,
+                onclone: (clonedDoc: Document, clonedElement: HTMLElement) => {
+                    clonedElement.style.display = 'block'
+                    clonedElement.style.overflow = 'visible'
+                    clonedElement.style.maxHeight = 'none'
+                    clonedElement.style.height = 'auto'
+                }
+            })
+            
+            const imgData = canvas.toDataURL('image/png', 1.0)
+
+            const pdf = new jsPDF({
+                orientation: "portrait",
+                unit: "mm",
+                format: "A4"
+            })
+
+            const pdfWidth = pdf.internal.pageSize.getWidth()
+            
+            // Calculer la hauteur du PDF proportionnellement à la largeur
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+
+            // Si la hauteur dépasse la page A4, on crée plusieurs pages
+            let heightLeft = pdfHeight
+            let position = 0
+
+            // Ajouter la première page
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST')
+            
+            // Si l'image est plus haute qu'une page, on ajoute des pages supplémentaires
+            while (heightLeft > pdf.internal.pageSize.getHeight()) {
+                position = position - pdf.internal.pageSize.getHeight()
+                pdf.addPage()
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST')
+                heightLeft -= pdf.internal.pageSize.getHeight()
+            }
+            
+            return pdf
+        } finally {
+            // Restaurer les styles originaux
+            element.style.overflow = originalOverflow
+            element.style.maxHeight = originalMaxHeight
+            element.style.height = ''
+        }
+    }
+
+    const handleDownloadPdf = async (): Promise<void> => {
+        if (isGenerating) return
+        
+        try {
+            setIsGenerating(true)
+            const pdf = await generatePDF()
+            if (pdf) {
+                pdf.save(`facture-${invoice.name || invoice.id}.pdf`)
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    zIndex: 9999
+                })
+            }
+        } catch (error) {
+            console.error('Erreur lors de la génération du PDF :', error);
+            alert('Une erreur est survenue lors de la génération du PDF');
+        } finally {
+            setIsGenerating(false)
+        }
+    }
+
+    const handleViewPdf = async (): Promise<void> => {
+        if (isGenerating) return
+        
+        try {
+            setIsGenerating(true)
+            const pdf = await generatePDF()
+            if (pdf) {
+                const pdfBlob = pdf.output('blob')
+                const pdfUrl = URL.createObjectURL(pdfBlob)
+                window.open(pdfUrl, '_blank')
+                setTimeout(() => URL.revokeObjectURL(pdfUrl), 100)
+            }
+        } catch (error) {
+            console.error('Erreur lors de la génération du PDF :', error);
+            alert('Une erreur est survenue lors de la génération du PDF');
+        } finally {
+            setIsGenerating(false)
+        }
+    }
+
+    const toggleViewMode = (): void => {
+        setIsViewMode(!isViewMode)
+    }
+
+    return (
+    <>
+        {/* Version mobile */}
+        <div className='mt-4 block lg:hidden'>
+            <div className='border-base-300 border-2 border-dashed rounded-xl p-4'>
+                {/* Barre d'outils mobile */}
+                <div className='flex gap-2 mb-4'>
+                    <button
+                        onClick={handleDownloadPdf}
+                        disabled={isGenerating}
+                        className='btn btn-sm btn-accent flex-1'>
+                        <Download className="w-4 mr-1" />
+                        {isGenerating ? 'Génération...' : 'Télécharger'}
+                    </button>
+                    <button
+                        onClick={handleViewPdf}
+                        disabled={isGenerating}
+                        className='btn btn-sm btn-primary flex-1'>
+                        <Eye className="w-4 mr-1" />
+                        {isGenerating ? 'Génération...' : 'Visualiser'}
+                    </button>
+                </div>
+
+                {/* Bouton plein écran */}
+                <button
+                    onClick={toggleViewMode}
+                    className='btn btn-xs btn-ghost w-full mb-2 text-xs'>
+                    {isViewMode ? 'Réduire' : 'Voir en plein écran'}
+                </button>
+
+                {/* Mode plein écran */}
+                {isViewMode ? (
+                    <div className='fixed inset-0 z-50 bg-white overflow-y-auto'>
+                        <div className='sticky top-0 bg-white border-b p-2 flex justify-between items-center z-10'>
+                            <h2 className='font-bold'>Aperçu facture</h2>
+                            <div className='flex gap-2'>
+                                <button
+                                    onClick={handleDownloadPdf}
+                                    disabled={isGenerating}
+                                    className='btn btn-xs btn-accent'>
+                                    <Download className="w-3" />
+                                </button>
+                                <button
+                                    onClick={toggleViewMode}
+                                    className='btn btn-xs btn-ghost'>
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+                        <div className='p-4 bg-white' ref={mobileFactureRef}>
+                            <FactureContent invoice={invoice} totals={totals} formatDate={formatDate} />
+                        </div>
+                    </div>
+                ) : (
+                    /* Mode normal (aperçu) */
+                    <div className='p-4 bg-white rounded-lg max-h-[600px] overflow-y-auto' ref={mobileFactureRef}>
+                        <FactureContent invoice={invoice} totals={totals} formatDate={formatDate} />
+                    </div>
+                )}
+
+                <p className='text-xs text-gray-500 mt-3 text-center'>
+                    💡 Le PDF généré inclura toute la facture
+                </p>
+            </div>
+        </div>
+
+        {/* Version desktop */}
+        <div className='mt-4 hidden lg:block'>
+            <div className='border-base-300 border-2 border-dashed rounded-xl p-5'>
+                <div className='flex gap-2 mb-4'>
+                    <button
+                        onClick={handleDownloadPdf}
+                        disabled={isGenerating}
+                        className='btn btn-sm btn-accent'>
+                        {isGenerating ? 'Génération...' : 'Facture PDF'}
+                        <Download className="w-4" />
+                    </button>
+                    <button
+                        onClick={handleViewPdf}
+                        disabled={isGenerating}
+                        className='btn btn-sm btn-primary'>
+                        Visualiser
+                        <Eye className="w-4" />
+                    </button>
+                </div>
+
+                <div className='p-8 bg-white rounded-lg max-h-[800px] overflow-y-auto' ref={desktopFactureRef}>
+                    <FactureContent 
+                        invoice={invoice} 
+                        totals={totals} 
+                        formatDate={formatDate} 
+                        isDesktop={true} 
+                    />
+                </div>
+
+                <p className='text-sm text-gray-500 mt-4 text-center'>
+                    💡 Le PDF généré inclura toute la facture
+                </p>
+            </div>
+        </div>
+    </>
+)
 }
 
 export default InvoicePDF
