@@ -2,7 +2,7 @@ import { Invoice, Totals } from '@/type'
 import confetti from 'canvas-confetti'
 import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
-import { ArrowDownFromLine, Layers, Eye, Download } from 'lucide-react'
+import { Layers, Download, Eye } from 'lucide-react'
 import React, { useRef, useState } from 'react'
 
 interface FacturePDFProps {
