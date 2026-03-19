@@ -1,11 +1,19 @@
 import { Invoice } from '@/type'
-import { InvoiceLine } from '@prisma/client'
 import { Plus, Trash } from 'lucide-react'
 import React from 'react'
 
 interface Props {
     invoice: Invoice
     setInvoice: (invoice: Invoice) => void
+}
+
+// Définir le type localement ou l'importer depuis votre type
+interface InvoiceLine {
+    id: string
+    description: string
+    quantity: number
+    unitPrice: number
+    invoiceId: string
 }
 
 const InvoiceLines: React.FC<Props> = ({ invoice, setInvoice }) => {
@@ -59,7 +67,7 @@ const InvoiceLines: React.FC<Props> = ({ invoice, setInvoice }) => {
                 </button>
             </div>
 
-            <div className='scrollable'>
+            <div className='overflow-x-auto'>
                 <table className='table w-full'>
                     <thead className='uppercase'>
                         <tr>
@@ -87,7 +95,6 @@ const InvoiceLines: React.FC<Props> = ({ invoice, setInvoice }) => {
                                         type="text"
                                         value={line.description}
                                         className='input input-sm input-bordered w-full'
-                                        min={0}
                                         onChange={(e) => handleDescriptionChange(index, e.target.value)}
                                     />
                                 </td>
@@ -106,7 +113,7 @@ const InvoiceLines: React.FC<Props> = ({ invoice, setInvoice }) => {
                                 </td>
                                 <td>
                                     <button
-                                        onClick={() => handleRemoveLine(index) }
+                                        onClick={() => handleRemoveLine(index)}
                                         className='btn btn-sm btn-circle btn-accent'>
                                         <Trash className="w-4" />
                                     </button>
@@ -116,7 +123,6 @@ const InvoiceLines: React.FC<Props> = ({ invoice, setInvoice }) => {
                     </tbody>
                 </table>
             </div>
-
         </div>
     )
 }

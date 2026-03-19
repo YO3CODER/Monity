@@ -126,7 +126,7 @@ export default function Home() {
     <Wrapper>
       <div className="flex flex-col space-y-4">
         <div className="flex justify-between items-center">
-          <h1 className="text-lg font-bold underline text-decoration-style: decoration-dotted text-emerald-500">Mes factures</h1>
+          <h1 className="text-lg font-bold  text-emerald-500">Mes factures</h1>
           <p className="text-sm text-gray-500">
             {user?.emailAddresses[0]?.emailAddress}
           </p>
