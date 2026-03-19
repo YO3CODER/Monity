@@ -3,7 +3,7 @@ import confetti from 'canvas-confetti'
 import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
 import { ArrowDownFromLine, Layers } from 'lucide-react'
-import React, { useRef } from 'react'
+import React, { useRef, useState } from 'react'
 
 interface FacturePDFProps {
     invoice: Invoice
@@ -19,36 +19,21 @@ function formatDate(dateString: string): string {
 const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
 
     const factureRef = useRef<HTMLDivElement>(null)
+    const [isGenerating, setIsGenerating] = useState(false)
 
     const handleDownloadPdf = async () => {
         const element = factureRef.current
-        if (element) {
+        if (element && !isGenerating) {
             try {
-                // Sauvegarder le style original
-                const originalStyle = {
-                    width: element.style.width,
-                    transform: element.style.transform,
-                    zoom: (element.style as any).zoom
-                }
-
-                // Forcer une taille fixe pour la capture
-                element.style.width = '800px'
-                element.style.transform = 'none'
-                ;(element.style as any).zoom = '1'
+                setIsGenerating(true)
 
                 const canvas = await html2canvas(element, { 
-                    scale: 2,
+                    scale: 2, // Réduit à 2 pour de meilleures performances
                     useCORS: true,
-                    windowWidth: 1200, // Forcer une largeur de fenêtre fixe
                     logging: false,
-                    backgroundColor: '#ffffff'
+                    allowTaint: false
                 })
-
-                // Restaurer le style original
-                element.style.width = originalStyle.width
-                element.style.transform = originalStyle.transform
-                ;(element.style as any).zoom = originalStyle.zoom
-
+                
                 const imgData = canvas.toDataURL('image/png')
 
                 const pdf = new jsPDF({
@@ -58,27 +43,10 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                 })
 
                 const pdfWidth = pdf.internal.pageSize.getWidth()
-                const pdfHeight = pdf.internal.pageSize.getHeight()
-                const imgWidth = pdfWidth
-                const imgHeight = (canvas.height * pdfWidth) / canvas.width
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width
 
-                let heightLeft = imgHeight
-                let position = 0
-                let page = 1
-
-                // Ajouter la première page
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-                
-                // Ajouter des pages supplémentaires si nécessaire
-                while (heightLeft > pdfHeight) {
-                    position = position - pdfHeight
-                    pdf.addPage()
-                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-                    heightLeft -= pdfHeight
-                    page++
-                }
-
-                pdf.save(`facture-${invoice.name}.pdf`)
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+                pdf.save(`facture-${invoice.name || invoice.id}.pdf`)
 
                 confetti({
                     particleCount: 100,
@@ -89,6 +57,9 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
 
             } catch (error) {
                 console.error('Erreur lors de la génération du PDF :', error);
+                alert('Une erreur est survenue lors de la génération du PDF');
+            } finally {
+                setIsGenerating(false)
             }
         }
     }
@@ -99,18 +70,18 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
 
                 <button
                     onClick={handleDownloadPdf}
+                    disabled={isGenerating}
                     className='btn btn-sm btn-accent mb-4'>
-                    Facture PDF
+                    {isGenerating ? 'Génération...' : 'Facture PDF'}
                     <ArrowDownFromLine className="w-4" />
                 </button>
 
-                <div className='p-8' ref={factureRef} style={{ zoom: 1 }}>
+                <div className='p-8 bg-white rounded-lg' ref={factureRef}>
 
                     <div className='flex justify-between items-center text-sm'>
                         <div className='flex flex-col'>
                             <div>
                                 <div className='flex items-center'>
-
                                     <div className='bg-accent-content text-accent rounded-full p-2'>
                                         <Layers className='h-6 w-6' />
                                     </div>
@@ -122,7 +93,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                             <h1 className='text-7xl font-bold uppercase'>Facture</h1>
                         </div>
                         <div className='text-right uppercase'>
-                            <p className='badge badge-ghost '>
+                            <p className='badge badge-ghost'>
                                 Facture ° {invoice.id}
                             </p>
                             <p className='my-2'>
@@ -134,7 +105,6 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                                 {formatDate(invoice.dueDate)}
                             </p>
                         </div>
-
                     </div>
 
                     <div className='my-6 flex justify-between'>
@@ -162,51 +132,52 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {invoice.lines.map((ligne, index) => (
-                                    <tr key={index + 1}>
-                                        <td>{index + 1}</td>
-                                        <td>{ligne.description}</td>
-                                        <td>{ligne.quantity}</td>
-                                        <td>{ligne.unitPrice.toFixed(2)} FCFA</td>
-                                        <td>{(ligne.quantity * ligne.unitPrice).toFixed(2)} FCFA</td>
+                                {invoice.lines && invoice.lines.length > 0 ? (
+                                    invoice.lines.map((ligne, index) => (
+                                        <tr key={index}>
+                                            <td>{index + 1}</td>
+                                            <td>{ligne.description}</td>
+                                            <td>{ligne.quantity}</td>
+                                            <td>{ligne.unitPrice.toFixed(2)} FCFA</td>
+                                            <td>{(ligne.quantity * ligne.unitPrice).toFixed(2)} FCFA</td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={5} className="text-center">Aucune ligne de facture</td>
                                     </tr>
-                                ))}
+                                )}
                             </tbody>
                         </table>
                     </div>
 
                     <div className='mt-6 space-y-2 text-md'>
                         <div className='flex justify-between'>
-                            <div className='font-bold'>
-                                Total Hors Taxes
-                            </div>
-                            <div>
-                                {totals.totalHT.toFixed(2)} FCFA
-                            </div>
+                            <span className='font-bold'>Total Hors Taxes</span>
+                            <span>{totals.totalHT.toFixed(2)} FCFA</span>
                         </div>
 
                         {invoice.vatActive && (
                             <div className='flex justify-between'>
-                                <div className='font-bold'>
-                                    TVA {invoice.vatRate} %
-                                </div>
-                                <div>
-                                    {totals.totalVAT.toFixed(2)} FCFA
-                                </div>
+                                <span className='font-bold'>TVA {invoice.vatRate} %</span>
+                                <span>{totals.totalVAT.toFixed(2)} FCFA</span>
                             </div>
                         )}
 
-                        <div className='flex justify-between'>
-                            <div className='font-bold'>
-                                Total Toutes Taxes Comprises
-                            </div>
-                            <div className='badge badge-accent'>
+                        <div className='flex justify-between border-t pt-2 mt-2'>
+                            <span className='font-bold'>Total TTC</span>
+                            <span className='badge badge-accent badge-lg'>
                                 {totals.totalTTC.toFixed(2)} FCFA
-                            </div>
+                            </span>
                         </div>
                     </div>
 
                 </div>
+
+                <p className='text-sm text-gray-500 mt-4 text-center'>
+                    💡 Si le PDF est tronqué, diminuez le zoom de la page avant de télécharger
+                </p>
+
             </div>
         </div>
     )
