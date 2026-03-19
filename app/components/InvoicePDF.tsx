@@ -24,10 +24,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
         const element = factureRef.current
         if (element) {
             try {
-
-                const canvas = await html2canvas(element, { scale: 3, useCORS: true })
-                const imgData = canvas.toDataURL('image/png')
-
+                // Configuration du PDF
                 const pdf = new jsPDF({
                     orientation: "portrait",
                     unit: "mm",
@@ -35,11 +32,42 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                 })
 
                 const pdfWidth = pdf.internal.pageSize.getWidth()
-                const pdfHeight = (canvas.height * pdfWidth) / canvas.width
+                const pdfHeight = pdf.internal.pageSize.getHeight()
 
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+                // Capturer l'élément entier
+                const canvas = await html2canvas(element, { 
+                    scale: 2, // Réduire légèrement l'échelle pour améliorer les performances
+                    useCORS: true,
+                    logging: false,
+                    windowWidth: 1200 // Largeur fixe pour la cohérence
+                })
+                
+                const imgData = canvas.toDataURL('image/png')
+                
+                // Calculer les dimensions de l'image par rapport au PDF
+                const imgWidth = pdfWidth
+                const imgHeight = (canvas.height * pdfWidth) / canvas.width
+                
+                let heightLeft = imgHeight
+                let position = 0
+                let page = 1
+
+                // Ajouter la première page
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+                
+                // Si l'image est plus grande que la page, ajouter des pages supplémentaires
+                while (heightLeft > pdfHeight) {
+                    position = position - pdfHeight
+                    pdf.addPage()
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+                    heightLeft -= pdfHeight
+                    page++
+                }
+
+                // Sauvegarder le PDF
                 pdf.save(`facture-${invoice.name}.pdf`)
 
+                // Confetti pour célébrer
                 confetti({
                     particleCount: 100,
                     spread: 70,
