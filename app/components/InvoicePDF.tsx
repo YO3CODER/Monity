@@ -28,11 +28,10 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                 setIsGenerating(true)
 
                 const canvas = await html2canvas(element, { 
-                    scale: 2,
+                    scale: 2, // Réduit à 2 pour de meilleures performances
                     useCORS: true,
                     logging: false,
-                    allowTaint: false,
-                    windowWidth: 1200
+                    allowTaint: false
                 })
                 
                 const imgData = canvas.toDataURL('image/png')
@@ -66,34 +65,21 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
     }
 
     return (
-        <div className='mt-4'>
+        <div className='mt-4 hidden lg:block'>
             <div className='border-base-300 border-2 border-dashed rounded-xl p-5'>
-                
-                {/* Bouton de téléchargement - visible sur tous les écrans */}
-                <div className='flex justify-end mb-4'>
-                    <button
-                        onClick={handleDownloadPdf}
-                        disabled={isGenerating}
-                        className='btn btn-accent'>
-                        {isGenerating ? (
-                            <>
-                                <span className="loading loading-spinner loading-sm"></span>
-                                Génération...
-                            </>
-                        ) : (
-                            <>
-                                Télécharger la facture PDF
-                                <ArrowDownFromLine className="w-4 ml-2" />
-                            </>
-                        )}
-                    </button>
-                </div>
 
-                {/* Facture - maintenant visible sur tous les écrans */}
-                <div className='p-4 sm:p-8 bg-white rounded-lg overflow-x-auto' ref={factureRef}>
-                    {/* Version mobile adaptative */}
-                    <div className='flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-sm'>
-                        <div className='flex flex-col w-full sm:w-auto'>
+                <button
+                    onClick={handleDownloadPdf}
+                    disabled={isGenerating}
+                    className='btn btn-sm btn-accent mb-4'>
+                    {isGenerating ? 'Génération...' : 'Facture PDF'}
+                    <ArrowDownFromLine className="w-4" />
+                </button>
+
+                <div className='p-8 bg-white rounded-lg' ref={factureRef}>
+
+                    <div className='flex justify-between items-center text-sm'>
+                        <div className='flex flex-col'>
                             <div>
                                 <div className='flex items-center'>
                                     <div className='bg-accent-content text-accent rounded-full p-2'>
@@ -104,13 +90,13 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                                     </span>
                                 </div>
                             </div>
-                            <h1 className='text-4xl sm:text-7xl font-bold uppercase mt-2'>Facture</h1>
+                            <h1 className='text-7xl font-bold uppercase'>Facture</h1>
                         </div>
-                        <div className='text-left sm:text-right uppercase w-full sm:w-auto'>
-                            <p className='badge badge-ghost mb-2'>
+                        <div className='text-right uppercase'>
+                            <p className='badge badge-ghost'>
                                 Facture ° {invoice.id}
                             </p>
-                            <p className='my-1'>
+                            <p className='my-2'>
                                 <strong>Date </strong>
                                 {formatDate(invoice.invoiceDate)}
                             </p>
@@ -121,56 +107,51 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                         </div>
                     </div>
 
-                    {/* Émetteur et Client - adaptatif */}
-                    <div className='my-6 flex flex-col sm:flex-row justify-between gap-4'>
+                    <div className='my-6 flex justify-between'>
                         <div>
                             <p className='badge badge-ghost mb-2'>Émetteur</p>
                             <p className='text-sm font-bold italic'>{invoice.issuerName}</p>
-                            <p className='text-sm text-gray-500 break-words max-w-xs'>{invoice.issuerAddress}</p>
+                            <p className='text-sm text-gray-500 w-52 break-words'>{invoice.issuerAddress}</p>
                         </div>
-                        <div className='sm:text-right'>
+                        <div className='text-right'>
                             <p className='badge badge-ghost mb-2'>Client</p>
                             <p className='text-sm font-bold italic'>{invoice.clientName}</p>
-                            <p className='text-sm text-gray-500 break-words max-w-xs'>{invoice.clientAddress}</p>
+                            <p className='text-sm text-gray-500 w-52 break-words'>{invoice.clientAddress}</p>
                         </div>
                     </div>
 
-                    {/* Tableau des lignes de facture */}
-                    <div className='overflow-x-auto -mx-4 sm:mx-0'>
-                        <div className='inline-block min-w-full align-middle'>
-                            <table className='table table-zebra w-full'>
-                                <thead>
-                                    <tr>
-                                        <th className='text-xs sm:text-sm'></th>
-                                        <th className='text-xs sm:text-sm'>Description</th>
-                                        <th className='text-xs sm:text-sm'>Qté</th>
-                                        <th className='text-xs sm:text-sm'>Prix Unitaire</th>
-                                        <th className='text-xs sm:text-sm'>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {invoice.lines && invoice.lines.length > 0 ? (
-                                        invoice.lines.map((ligne, index) => (
-                                            <tr key={index}>
-                                                <td className='text-xs sm:text-sm'>{index + 1}</td>
-                                                <td className='text-xs sm:text-sm'>{ligne.description}</td>
-                                                <td className='text-xs sm:text-sm'>{ligne.quantity}</td>
-                                                <td className='text-xs sm:text-sm'>{ligne.unitPrice.toFixed(2)} FCFA</td>
-                                                <td className='text-xs sm:text-sm'>{(ligne.quantity * ligne.unitPrice).toFixed(2)} FCFA</td>
-                                            </tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={5} className="text-center text-xs sm:text-sm">Aucune ligne de facture</td>
+                    <div className='overflow-x-auto'>
+                        <table className='table table-zebra'>
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Description</th>
+                                    <th>Quantité</th>
+                                    <th>Prix Unitaire</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {invoice.lines && invoice.lines.length > 0 ? (
+                                    invoice.lines.map((ligne, index) => (
+                                        <tr key={index}>
+                                            <td>{index + 1}</td>
+                                            <td>{ligne.description}</td>
+                                            <td>{ligne.quantity}</td>
+                                            <td>{ligne.unitPrice.toFixed(2)} FCFA</td>
+                                            <td>{(ligne.quantity * ligne.unitPrice).toFixed(2)} FCFA</td>
                                         </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={5} className="text-center">Aucune ligne de facture</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
 
-                    {/* Totaux */}
-                    <div className='mt-6 space-y-2 text-sm sm:text-md'>
+                    <div className='mt-6 space-y-2 text-md'>
                         <div className='flex justify-between'>
                             <span className='font-bold'>Total Hors Taxes</span>
                             <span>{totals.totalHT.toFixed(2)} FCFA</span>
@@ -185,16 +166,18 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
 
                         <div className='flex justify-between border-t pt-2 mt-2'>
                             <span className='font-bold'>Total TTC</span>
-                            <span className='badge badge-accent badge-sm sm:badge-lg'>
+                            <span className='badge badge-accent badge-lg'>
                                 {totals.totalTTC.toFixed(2)} FCFA
                             </span>
                         </div>
                     </div>
+
                 </div>
 
                 <p className='text-sm text-gray-500 mt-4 text-center'>
                     💡 Si le PDF est tronqué, diminuez le zoom de la page avant de télécharger
                 </p>
+
             </div>
         </div>
     )
