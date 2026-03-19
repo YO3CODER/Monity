@@ -127,8 +127,8 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                                         <td>{index + 1}</td>
                                         <td>{ligne.description}</td>
                                         <td>{ligne.quantity}</td>
-                                        <td>{ligne.unitPrice.toFixed(2)} €</td>
-                                        <td>{(ligne.quantity * ligne.unitPrice).toFixed(2)} €</td>
+                                        <td>{ligne.unitPrice.toFixed(2)} FCFA</td>
+                                        <td>{(ligne.quantity * ligne.unitPrice).toFixed(2)} FCFA</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -141,7 +141,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                                 Total Hors Taxes
                             </div>
                             <div>
-                                {totals.totalHT.toFixed(2)} €
+                                {totals.totalHT.toFixed(2)} FCFA
                             </div>
                         </div>
 
@@ -151,7 +151,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                                     TVA {invoice.vatRate} %
                                 </div>
                                 <div>
-                                    {totals.totalVAT.toFixed(2)} €
+                                    {totals.totalVAT.toFixed(2)} FCFA
                                 </div>
                             </div>
                         )}
@@ -161,7 +161,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                                 Total Toutes Taxes Comprises
                             </div>
                             <div className='badge badge-accent'>
-                                {totals.totalTTC.toFixed(2)} €
+                                {totals.totalTTC.toFixed(2)} FCFA
                             </div>
                         </div>
                     </div>
