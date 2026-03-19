@@ -22,149 +22,34 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
 
     const handleDownloadPdf = async () => {
         const element = factureRef.current
-        if (!element) return
+        if (element) {
+            try {
 
-        try {
-            // Créer un clone de l'élément pour ne pas affecter l'affichage
-            const clone = element.cloneNode(true) as HTMLElement
-            clone.style.width = '800px' // Largeur fixe pour la cohérence
-            clone.style.position = 'absolute'
-            clone.style.left = '-9999px'
-            document.body.appendChild(clone)
+                const canvas = await html2canvas(element, { scale: 3, useCORS: true })
+                const imgData = canvas.toDataURL('image/png')
 
-            // Configuration du PDF
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "px",
-                format: "a4"
-            })
-
-            const pdfWidth = pdf.internal.pageSize.getWidth()
-            const pdfHeight = pdf.internal.pageSize.getHeight()
-
-            // Séparer le contenu en sections
-            const headerSection = clone.querySelector('.flex.justify-between.items-center') as HTMLElement
-            const infoSection = clone.querySelector('.my-6.flex.justify-between') as HTMLElement
-            const tableSection = clone.querySelector('.overflow-x-auto') as HTMLElement
-            const totalsSection = clone.querySelector('.mt-6.space-y-2') as HTMLElement
-
-            let yOffset = 0
-            let currentPage = 1
-
-            // Fonction pour ajouter une section au PDF
-            const addSection = async (section: HTMLElement, sectionName: string) => {
-                if (!section) return 0
-
-                // Cacher temporairement les autres sections
-                const sections = [headerSection, infoSection, tableSection, totalsSection]
-                sections.forEach(s => { if (s) s.style.display = 'none' })
-                section.style.display = 'block'
-
-                // Capturer la section
-                const canvas = await html2canvas(section, {
-                    scale: 2,
-                    useCORS: true,
-                    backgroundColor: '#ffffff'
+                const pdf = new jsPDF({
+                    orientation: "portrait",
+                    unit: "mm",
+                    format: "A4"
                 })
 
-                // Restaurer l'affichage
-                sections.forEach(s => { if (s) s.style.display = '' })
+                const pdfWidth = pdf.internal.pageSize.getWidth()
+                const pdfHeight = (canvas.height * pdfWidth) / canvas.width
 
-                const imgData = canvas.toDataURL('image/png')
-                const imgWidth = pdfWidth - 40 // Marge de 20px de chaque côté
-                const imgHeight = (canvas.height * imgWidth) / canvas.width
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight)
+                pdf.save(`facture-${invoice.name}.pdf`)
 
-                // Vérifier si la section tient sur la page courante
-                if (yOffset + imgHeight > pdfHeight) {
-                    pdf.addPage()
-                    currentPage++
-                    yOffset = 20 // Marge en haut de la nouvelle page
-                }
+                confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    zIndex: 9999
+                })
 
-                // Ajouter l'image au PDF
-                pdf.addImage(imgData, 'PNG', 20, yOffset, imgWidth, imgHeight)
-                yOffset += imgHeight + 10 // Espace entre les sections
-
-                return imgHeight
+            } catch (error) {
+                console.error('Erreur lors de la génération du PDF :', error);
             }
-
-            // Ajouter toutes les sections dans l'ordre
-            await addSection(headerSection, 'header')
-            await addSection(infoSection, 'info')
-
-            // Traitement spécial pour le tableau (peut être long)
-            if (tableSection) {
-                const tableClone = tableSection.cloneNode(true) as HTMLElement
-                const tbody = tableClone.querySelector('tbody')
-                const thead = tableClone.querySelector('thead')
-                
-                if (tbody && thead) {
-                    const rows = Array.from(tbody.querySelectorAll('tr'))
-                    const rowsPerPage = 15 // Ajustez selon vos besoins
-                    
-                    for (let i = 0; i < rows.length; i += rowsPerPage) {
-                        // Créer un tableau temporaire avec un groupe de lignes
-                        const tempTable = document.createElement('div')
-                        tempTable.innerHTML = `
-                            <div class="overflow-x-auto">
-                                <table class="table table-zebra">
-                                    <thead>${thead.outerHTML}</thead>
-                                    <tbody>
-                                        ${rows.slice(i, i + rowsPerPage).map(row => row.outerHTML).join('')}
-                                    </tbody>
-                                </table>
-                            </div>
-                        `
-                        
-                        tempTable.style.width = '800px'
-                        tempTable.style.position = 'absolute'
-                        tempTable.style.left = '-9999px'
-                        document.body.appendChild(tempTable)
-
-                        const canvas = await html2canvas(tempTable, {
-                            scale: 2,
-                            useCORS: true,
-                            backgroundColor: '#ffffff'
-                        })
-
-                        document.body.removeChild(tempTable)
-
-                        const imgData = canvas.toDataURL('image/png')
-                        const imgWidth = pdfWidth - 40
-                        const imgHeight = (canvas.height * imgWidth) / canvas.width
-
-                        // Nouvelle page si nécessaire
-                        if (yOffset + imgHeight > pdfHeight) {
-                            pdf.addPage()
-                            currentPage++
-                            yOffset = 20
-                        }
-
-                        pdf.addImage(imgData, 'PNG', 20, yOffset, imgWidth, imgHeight)
-                        yOffset += imgHeight + 10
-                    }
-                }
-            }
-
-            // Ajouter la section des totaux
-            await addSection(totalsSection, 'totals')
-
-            // Nettoyer le clone
-            document.body.removeChild(clone)
-
-            // Sauvegarder le PDF
-            pdf.save(`facture-${invoice.name}.pdf`)
-
-            // Lancer les confettis
-            confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 },
-                zIndex: 9999
-            })
-
-        } catch (error) {
-            console.error('Erreur lors de la génération du PDF :', error);
         }
     }
 
