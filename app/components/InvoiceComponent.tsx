@@ -5,7 +5,7 @@ import React from 'react'
 
 type InvoiceComponentProps = {
     invoice: Invoice;
-    index: number
+    index?: number; // Rendre optionnel ou le supprimer
 }
 
 const getStatusBadge = (status: number) => {
@@ -50,15 +50,13 @@ const getStatusBadge = (status: number) => {
             return (
                 <div className='badge badge-lg'>
                     <XCircle className='w-4' />
-                    Indefinis
+                    Indéfini
                 </div>
             )
     }
 }
 
-
-const InvoiceComponent: React.FC<InvoiceComponentProps> = ({ invoice, index }) => {
-
+const InvoiceComponent: React.FC<InvoiceComponentProps> = ({ invoice }) => { // Supprimé index des paramètres
 
     const calculateTotal = () => {
         const totalHT = invoice?.lines?.reduce((acc, line) => {
@@ -68,11 +66,8 @@ const InvoiceComponent: React.FC<InvoiceComponentProps> = ({ invoice, index }) =
         }, 0)
 
         const totalVAT = totalHT * (invoice.vatRate / 100);
-        return totalHT +  totalVAT
+        return totalHT + totalVAT
     }
-
-
-
 
     return (
         <div className='bg-base-200/90 p-5 rounded-xl space-y-2 shadow'>
@@ -83,22 +78,21 @@ const InvoiceComponent: React.FC<InvoiceComponentProps> = ({ invoice, index }) =
                     href={`/invoice/${invoice.id}`}>
                     Plus
                     <SquareArrowOutUpRight className='w-4' />
-
                 </Link>
             </div>
 
             <div className='w-full'>
-                <div >
+                <div>
                     <div className='stat-title'>
                         <div className='uppercase text-sm'>FACT-{invoice.id}</div>
                     </div>
                     <div>
                         <div className='stat-value'>
-                            {calculateTotal().toFixed(2) } €
+                            {calculateTotal().toFixed(2)} €
                         </div>
                     </div>
                     <div className='stat-desc'>
-                       {invoice.name}
+                        {invoice.name}
                     </div>
                 </div>
             </div>

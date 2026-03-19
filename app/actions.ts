@@ -1,10 +1,49 @@
-// app/actions.ts
 "use server";
 
 import sql from '@/lib/neon';
 import { auth, currentUser } from '@clerk/nextjs/server';
 import { Invoice, toInvoice, toUser, User } from "@/type";
 import { randomBytes } from "crypto";
+
+// Définir un type pour le résultat de la suppression
+type DeletedInvoice = {
+  id: string;
+  name: string;
+  userId: string;
+  issuerName: string;
+  issuerAddress: string;
+  clientName: string;
+  clientAddress: string;
+  invoiceDate: string;
+  dueDate: string;
+  vatActive: boolean;
+  vatRate: number;
+  status: number;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+// Fonction de transformation pour DeletedInvoice
+function toDeletedInvoice(data: any): DeletedInvoice | null {
+  if (!data) return null;
+  
+  return {
+    id: data.id,
+    name: data.name,
+    userId: data.userId,
+    issuerName: data.issuerName,
+    issuerAddress: data.issuerAddress,
+    clientName: data.clientName,
+    clientAddress: data.clientAddress,
+    invoiceDate: data.invoiceDate,
+    dueDate: data.dueDate,
+    vatActive: data.vatActive,
+    vatRate: data.vatRate,
+    status: data.status,
+    createdAt: data.createdAt,
+    updatedAt: data.updatedAt
+  };
+}
 
 /* =========================
    UTILISATEUR
@@ -262,7 +301,7 @@ export async function updateInvoice(invoice: Invoice): Promise<boolean | null> {
 /* =========================
    SUPPRIMER FACTURE
 ========================= */
-export async function deleteInvoice(invoiceId: string): Promise<any | null> {
+export async function deleteInvoice(invoiceId: string): Promise<DeletedInvoice | null> {
   try {
     if (!invoiceId) return null;
 
@@ -272,7 +311,7 @@ export async function deleteInvoice(invoiceId: string): Promise<any | null> {
       RETURNING *
     `;
 
-    return deleted;
+    return toDeletedInvoice(deleted);
 
   } catch (error) {
     console.error('Erreur deleteInvoice:', error);
