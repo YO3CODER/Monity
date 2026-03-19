@@ -43,14 +43,14 @@ export default function Home() {
   const handleCreateInvoice = async () => {
     try {
       if (!isSignedIn) return;
-      
+
       await createEmptyInvoice(invoiceName);
       await fetchInvoices();
       setInvoiceName("");
-      
+
       const modal = document.getElementById('my_modal_3') as HTMLDialogElement;
       if (modal) modal.close();
-      
+
       confetti({
         particleCount: 100,
         spread: 70,
@@ -84,21 +84,21 @@ export default function Home() {
           <div className="bg-accent-content text-accent rounded-full p-4 mb-6">
             <Layers className='h-12 w-12' />
           </div>
-          
+
           <h1 className="text-3xl font-bold mb-4">
             Bienvenue sur <span className="text-accent">InVoice</span>
           </h1>
-          
+
           <p className="text-lg mb-8 max-w-md">
             Gérez vos factures simplement et efficacement. Connectez-vous pour commencer.
           </p>
-          
+
           <SignInButton mode="modal">
             <button className="btn btn-accent btn-lg">
               Se connecter / S&apos;inscrire
             </button>
           </SignInButton>
-          
+
           <div className="mt-12 grid md:grid-cols-3 gap-6 max-w-3xl">
             <div className="card bg-base-200 p-4">
               <div className="text-2xl mb-2">📄</div>
@@ -127,14 +127,14 @@ export default function Home() {
       <div className="flex flex-col space-y-4">
         <div className="flex justify-between items-center">
           <h1 className="text-lg font-bold  text-emerald-500">Mes factures</h1>
-          <p className="text-sm text-gray-500">
+          <p className="hidden sm:block text-sm text-gray-500">
             {user?.emailAddresses[0]?.emailAddress}
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-4">
           {/* Bouton de création */}
-          <div 
+          <div
             className="cursor-pointer border border-accent rounded-xl flex flex-col justify-center items-center p-5 hover:bg-accent/5 transition-colors"
             onClick={() => (document.getElementById('my_modal_3') as HTMLDialogElement).showModal()}
           >
@@ -159,8 +159,8 @@ export default function Home() {
             ))
           ) : (
             <div className="col-span-2 text-gray-500 py-8 text-center">
-              Aucune facture pour le moment. 
-              <button 
+              Aucune facture pour le moment.
+              <button
                 className="link link-accent ml-2"
                 onClick={() => (document.getElementById('my_modal_3') as HTMLDialogElement).showModal()}
               >
