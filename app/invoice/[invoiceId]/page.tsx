@@ -104,10 +104,11 @@ const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
             </p>
             <div className='flex md:mt-0 mt-4 gap-2'>
               <select
-                className='select select-sm select-bordered w-full'
-                value={invoice?.status}
+                defaultValue={invoice?.status}
+                className="select select-secondary w-full"
                 onChange={handleStatusChange}
               >
+                <option disabled={true}>Sélectionner un statut</option>
                 <option value={1}>Brouillon</option>
                 <option value={2}>En attente</option>
                 <option value={3}>Payée</option>
@@ -115,7 +116,7 @@ const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
                 <option value={5}>Impayée</option>
               </select>
 
-              <button 
+              <button
                 className='btn btn-sm btn-accent'
                 disabled={isSaveDisabled || isLoading}
                 onClick={handleSave}
@@ -190,8 +191,8 @@ const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
                 Cette action est irréversible.
               </p>
               <div className="modal-action">
-                <button 
-                  className="btn btn-error" 
+                <button
+                  className="btn btn-error"
                   onClick={() => {
                     handleDelete()
                     setShowDeleteModal(false)
@@ -199,8 +200,8 @@ const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
                 >
                   Oui, supprimer
                 </button>
-                <button 
-                  className="btn" 
+                <button
+                  className="btn"
                   onClick={() => setShowDeleteModal(false)}
                 >
                   Annuler
