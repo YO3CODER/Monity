@@ -69,6 +69,17 @@ const InvoiceComponent: React.FC<InvoiceComponentProps> = ({ invoice }) => { // 
         return totalHT + totalVAT
     }
 
+    const calculateTotalSansTVA = () => {
+        const totalHT = invoice?.lines?.reduce((acc, line) => {
+            const quantity = line.quantity ?? 0;
+            const unitPrice = line.unitPrice ?? 0;
+            return acc + quantity * unitPrice
+        }, 0)
+
+        
+        return totalHT 
+    }
+
     return (
         <div className='bg-base-200/90 p-5 rounded-xl space-y-2 shadow'>
             <div className='flex justify-between items-center w-full'>
@@ -87,8 +98,8 @@ const InvoiceComponent: React.FC<InvoiceComponentProps> = ({ invoice }) => { // 
                         <div className='uppercase text-sm'>FACT-{invoice.id}</div>
                     </div>
                     <div>
-                        <div className='stat-value'>
-                            {calculateTotal().toFixed(2)} FCFA
+                        <div className='stat-value text-2xl'>
+                            {calculateTotalSansTVA().toFixed(2)} FCFA
                         </div>
                     </div>
                     <div className='stat-desc'>
