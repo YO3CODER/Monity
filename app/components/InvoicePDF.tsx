@@ -2,7 +2,7 @@ import { Invoice, Totals } from '@/type'
 import confetti from 'canvas-confetti'
 import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
-import { Layers, Download, Eye, MessageCircle } from 'lucide-react' // Ajout de MessageCircle
+import { Layers, Download, Eye, MessageCircle } from 'lucide-react'
 import React, { useRef, useState } from 'react'
 
 interface FacturePDFProps {
@@ -235,7 +235,6 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
     const desktopFactureRef = useRef<HTMLDivElement>(null)
     const [isGenerating, setIsGenerating] = useState<boolean>(false)
     const [isViewMode, setIsViewMode] = useState<boolean>(false)
-    const [isSharing, setIsSharing] = useState<boolean>(false) // Nouvel état pour le partage
 
     const generatePDF = async (): Promise<jsPDF | null> => {
         const isMobile = window.innerWidth < 1024
@@ -354,58 +353,60 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
         }
     }
 
-    const handleShareWhatsApp = async (): Promise<void> => {
-        if (isGenerating || isSharing) return
+    const handleWhatsApp = async (): Promise<void> => {
+        if (isGenerating) return
         
         try {
-            setIsSharing(true)
+            setIsGenerating(true)
             const pdf = await generatePDF()
             if (pdf) {
+                // Convertir le PDF en Blob
                 const pdfBlob = pdf.output('blob')
-                const pdfFile = new File([pdfBlob], `facture-${invoice.name || invoice.id}.pdf`, { type: 'application/pdf' })
                 
-                // Vérifier si l'API Web Share est disponible
-                if (navigator.share && navigator.canShare({ files: [pdfFile] })) {
-                    try {
-                        await navigator.share({
-                            title: `Facture ${invoice.name || invoice.id}`,
-                            text: `Voici la facture ${invoice.name || invoice.id} de ${invoice.issuerName}`,
-                            files: [pdfFile]
-                        })
-                    } catch (shareError) {
-                        // Fallback si l'utilisateur annule ou si le partage échoue
-                        console.log('Partage annulé ou non supporté')
-                        fallbackWhatsApp()
-                    }
+                // Créer un URL temporaire pour le blob
+                const pdfUrl = URL.createObjectURL(pdfBlob)
+                
+                // Message pré-formaté
+                const message = encodeURIComponent(
+                    `*FACTURE ${invoice.name || invoice.id}*\n\n` +
+                    `De : ${invoice.issuerName}\n` +
+                    `Pour : ${invoice.clientName}\n` +
+                    `Montant TTC : ${totals.totalTTC.toFixed(0)} FCFA\n\n` +
+                    `Document envoyé depuis Monity`
+                )
+                
+                // Détecter si c'est un mobile
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+                
+                // URL WhatsApp avec le message
+                let whatsappUrl
+                if (isMobile) {
+                    // Sur mobile, on essaie d'ouvrir l'app WhatsApp
+                    whatsappUrl = `whatsapp://send?text=${message}`
                 } else {
-                    // Fallback pour les navigateurs qui ne supportent pas Web Share
-                    fallbackWhatsApp()
+                    // Sur desktop, on ouvre WhatsApp Web
+                    whatsappUrl = `https://web.whatsapp.com/send?text=${message}`
                 }
+                
+                // Ouvrir WhatsApp
+                window.open(whatsappUrl, '_blank')
+                
+                // Nettoyer l'URL temporaire après un délai
+                setTimeout(() => {
+                    URL.revokeObjectURL(pdfUrl)
+                }, 2000)
+                
+                // Informer l'utilisateur
+                setTimeout(() => {
+                    alert('📎 N\'oubliez pas de joindre le PDF à votre message WhatsApp.\n\nLe fichier se trouve dans votre dossier de téléchargements.')
+                }, 1000)
             }
         } catch (error) {
-            console.error('Erreur lors du partage WhatsApp :', error);
-            fallbackWhatsApp()
+            console.error('Erreur lors de la préparation pour WhatsApp :', error);
+            alert('Une erreur est survenue. Veuillez réessayer.');
         } finally {
-            setIsSharing(false)
+            setIsGenerating(false)
         }
-    }
-
-    const fallbackWhatsApp = (): void => {
-        // Message par défaut pour WhatsApp
-        const message = encodeURIComponent(
-            `Bonjour,\n\nJe vous envoie la facture ${invoice.name || invoice.id} d'un montant de ${totals.totalTTC.toFixed(0)} FCFA.\n\nCordialement, ${invoice.issuerName}`
-        )
-        
-        // Ouvrir WhatsApp Web ou l'application mobile
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-        const whatsappUrl = isMobile
-            ? `whatsapp://send?text=${message}`
-            : `https://web.whatsapp.com/send?text=${message}`
-        
-        window.open(whatsappUrl, '_blank')
-        
-        // Informer l'utilisateur
-        alert('Le PDF a été généré. Veuillez le joindre manuellement à votre conversation WhatsApp.')
     }
 
     const toggleViewMode = (): void => {
@@ -422,24 +423,24 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                     <button
                         onClick={handleDownloadPdf}
                         disabled={isGenerating}
-                        className='btn btn-sm btn-accent flex-1 min-w-[120px]'>
+                        className='btn btn-sm btn-accent flex-1 min-w-[100px]'>
                         <Download className="w-4 mr-1" />
                         {isGenerating ? '...' : 'Télécharger'}
                     </button>
                     <button
                         onClick={handleViewPdf}
                         disabled={isGenerating}
-                        className='btn btn-sm btn-primary flex-1 min-w-[120px]'>
+                        className='btn btn-sm btn-primary flex-1 min-w-[100px]'>
                         <Eye className="w-4 mr-1" />
                         {isGenerating ? '...' : 'Visualiser'}
                     </button>
                     <button
-                        onClick={handleShareWhatsApp}
-                        disabled={isGenerating || isSharing}
-                        className='btn btn-sm btn-success flex-1 min-w-[120px]'
+                        onClick={handleWhatsApp}
+                        disabled={isGenerating}
+                        className='btn btn-sm flex-1 min-w-[100px] text-white'
                         style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}>
                         <MessageCircle className="w-4 mr-1" />
-                        {isSharing ? '...' : 'WhatsApp'}
+                        {isGenerating ? '...' : 'WhatsApp'}
                     </button>
                 </div>
 
@@ -463,11 +464,11 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                                     <Download className="w-3" />
                                 </button>
                                 <button
-                                    onClick={handleShareWhatsApp}
-                                    disabled={isGenerating || isSharing}
-                                    className='btn btn-xs btn-success'
+                                    onClick={handleWhatsApp}
+                                    disabled={isGenerating}
+                                    className='btn btn-xs'
                                     style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}>
-                                    <MessageCircle className="w-3" />
+                                    <MessageCircle className="w-3 text-white" />
                                 </button>
                                 <button
                                     onClick={toggleViewMode}
@@ -512,12 +513,12 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                         <Eye className="w-4" />
                     </button>
                     <button
-                        onClick={handleShareWhatsApp}
-                        disabled={isGenerating || isSharing}
-                        className='btn btn-sm'
-                        style={{ backgroundColor: '#25D366', borderColor: '#25D366', color: 'white' }}>
+                        onClick={handleWhatsApp}
+                        disabled={isGenerating}
+                        className='btn btn-sm text-white'
+                        style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}>
                         <MessageCircle className="w-4 mr-1" />
-                        {isSharing ? 'Partage...' : 'WhatsApp'}
+                        {isGenerating ? 'Préparation...' : 'WhatsApp'}
                     </button>
                 </div>
 
