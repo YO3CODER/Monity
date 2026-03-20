@@ -363,47 +363,73 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                 // Convertir le PDF en Blob
                 const pdfBlob = pdf.output('blob')
                 
-                // Créer un URL temporaire pour le blob
-                const pdfUrl = URL.createObjectURL(pdfBlob)
+                // Créer un fichier à partir du blob
+                const pdfFile = new File([pdfBlob], `facture-${invoice.name || invoice.id}.pdf`, { 
+                    type: 'application/pdf' 
+                })
                 
-                // Message pré-formaté
-                const message = encodeURIComponent(
-                    `*FACTURE ${invoice.name || invoice.id}*\n\n` +
-                    `De : ${invoice.issuerName}\n` +
-                    `Pour : ${invoice.clientName}\n` +
-                    `Montant TTC : ${totals.totalTTC.toFixed(0)} FCFA\n\n` +
-                    `Document envoyé depuis Monity`
-                )
-                
-                // Détecter si c'est un mobile
-                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-                
-                // URL WhatsApp avec le message
-                let whatsappUrl
-                if (isMobile) {
-                    // Sur mobile, on essaie d'ouvrir l'app WhatsApp
-                    whatsappUrl = `whatsapp://send?text=${message}`
+                // Vérifier si l'API Web Share est disponible et supporte les fichiers
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+                    // Partager via l'API Web Share (ouvre WhatsApp directement sur mobile)
+                    await navigator.share({
+                        title: `Facture ${invoice.name || invoice.id}`,
+                        text: `Facture de ${invoice.issuerName} pour ${invoice.clientName}`,
+                        files: [pdfFile]
+                    })
                 } else {
-                    // Sur desktop, on ouvre WhatsApp Web
-                    whatsappUrl = `https://web.whatsapp.com/send?text=${message}`
+                    // Fallback : Télécharger le PDF et ouvrir WhatsApp
+                    const pdfUrl = URL.createObjectURL(pdfBlob)
+                    
+                    // Créer un lien de téléchargement temporaire
+                    const link = document.createElement('a')
+                    link.href = pdfUrl
+                    link.download = `facture-${invoice.name || invoice.id}.pdf`
+                    link.click()
+                    
+                    // Message pour WhatsApp
+                    const message = encodeURIComponent(
+                        `*FACTURE ${invoice.name || invoice.id}*\n\n` +
+                        `De : ${invoice.issuerName}\n` +
+                        `Pour : ${invoice.clientName}\n` +
+                        `Montant TTC : ${totals.totalTTC.toFixed(0)} FCFA\n\n` +
+                        `📎 Veuillez joindre le PDF téléchargé à ce message.`
+                    )
+                    
+                    // Détecter si c'est un mobile
+                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+                    
+                    // URL WhatsApp
+                    const whatsappUrl = isMobile
+                        ? `whatsapp://send?text=${message}`
+                        : `https://web.whatsapp.com/send?text=${message}`
+                    
+                    // Ouvrir WhatsApp
+                    window.open(whatsappUrl, '_blank')
+                    
+                    // Nettoyer l'URL temporaire
+                    setTimeout(() => {
+                        URL.revokeObjectURL(pdfUrl)
+                    }, 2000)
+                    
+                    // Message d'instruction
+                    alert('✅ PDF téléchargé !\n\n📱 Joignez-le à votre conversation WhatsApp.')
                 }
-                
-                // Ouvrir WhatsApp
-                window.open(whatsappUrl, '_blank')
-                
-                // Nettoyer l'URL temporaire après un délai
-                setTimeout(() => {
-                    URL.revokeObjectURL(pdfUrl)
-                }, 2000)
-                
-                // Informer l'utilisateur
-                setTimeout(() => {
-                    alert('📎 N\'oubliez pas de joindre le PDF à votre message WhatsApp.\n\nLe fichier se trouve dans votre dossier de téléchargements.')
-                }, 1000)
             }
         } catch (error) {
-            console.error('Erreur lors de la préparation pour WhatsApp :', error);
-            alert('Une erreur est survenue. Veuillez réessayer.');
+            console.error('Erreur lors du partage WhatsApp :', error);
+            
+            // Fallback simple en cas d'erreur
+            alert('❌ Impossible de partager via WhatsApp.\n\nVeuillez télécharger le PDF et le partager manuellement.');
+            
+            // Télécharger le PDF quand même
+            try {
+                const pdf = await generatePDF()
+                if (pdf) {
+                    pdf.save(`facture-${invoice.name || invoice.id}.pdf`)
+                }
+            } catch (downloadError) {
+                console.error('Erreur lors du téléchargement de secours :', downloadError);
+            }
         } finally {
             setIsGenerating(false)
         }
