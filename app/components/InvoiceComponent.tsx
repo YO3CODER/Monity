@@ -5,7 +5,7 @@ import React from 'react'
 
 type InvoiceComponentProps = {
     invoice: Invoice;
-    index?: number; // Rendre optionnel ou le supprimer
+    index?: number;
 }
 
 const getStatusBadge = (status: number) => {
@@ -31,7 +31,6 @@ const getStatusBadge = (status: number) => {
                     Payée
                 </div>
             )
-
         case 4:
             return (
                 <div className='badge badge-lg badge-info flex items-center gap-2'>
@@ -56,32 +55,25 @@ const getStatusBadge = (status: number) => {
     }
 }
 
-const InvoiceComponent: React.FC<InvoiceComponentProps> = ({ invoice }) => { // Supprimé index des paramètres
+const InvoiceComponent: React.FC<InvoiceComponentProps> = ({ invoice }) => {
 
-    const calculateTotal = () => {
+    const calculateTotals = () => {
         const totalHT = invoice?.lines?.reduce((acc, line) => {
             const quantity = line.quantity ?? 0;
             const unitPrice = line.unitPrice ?? 0;
             return acc + quantity * unitPrice
-        }, 0)
+        }, 0) || 0
 
-        const totalVAT = totalHT * (invoice.vatRate / 100);
-        return totalHT + totalVAT
-    }
-
-    const calculateTotalSansTVA = () => {
-        const totalHT = invoice?.lines?.reduce((acc, line) => {
-            const quantity = line.quantity ?? 0;
-            const unitPrice = line.unitPrice ?? 0;
-            return acc + quantity * unitPrice
-        }, 0)
-
+        const totalVAT = invoice.vatActive ? totalHT * (invoice.vatRate / 100) : 0;
+        const totalTTC = totalHT + totalVAT
         
-        return totalHT 
+        return { totalHT, totalVAT, totalTTC }
     }
+
+    const { totalHT, totalVAT, totalTTC } = calculateTotals()
 
     return (
-        <div className='bg-base-200/90 p-5 rounded-xl space-y-2 shadow'>
+        <div className='bg-base-200/90 p-5 rounded-xl space-y-3 shadow'>
             <div className='flex justify-between items-center w-full'>
                 <div>{getStatusBadge(invoice.status)}</div>
                 <Link
@@ -97,12 +89,30 @@ const InvoiceComponent: React.FC<InvoiceComponentProps> = ({ invoice }) => { // 
                     <div className='stat-title'>
                         <div className='uppercase text-sm'>FACT-{invoice.id}</div>
                     </div>
-                    <div>
-                        <div className='stat-value text-2xl'>
-                            {calculateTotalSansTVA().toFixed(2)} FCFA
-                        </div>
+                    
+                    {/* Total HT */}
+                    <div className='flex justify-between items-center text-sm text-gray-600'>
+                        <span>Montant HT :</span>
+                        <span className='font-medium'>{totalHT.toFixed(0)} FCFA</span>
                     </div>
-                    <div className='stat-desc'>
+                    
+                    {/* TVA (si active) */}
+                    {invoice.vatActive && (
+                        <div className='flex justify-between items-center text-sm text-gray-600'>
+                            <span>TVA ({invoice.vatRate}%) :</span>
+                            <span className='font-medium'>{totalVAT.toFixed(0)} FCFA</span>
+                        </div>
+                    )}
+                    
+                    {/* Total TTC (mis en évidence) */}
+                    <div className='flex justify-between items-center mt-2 pt-2 border-t border-base-300'>
+                        <span className='font-bold'>Total TTC :</span>
+                        <span className='stat-value text-2xl text-accent'>
+                            {totalTTC.toFixed(0)} FCFA
+                        </span>
+                    </div>
+                    
+                    <div className='stat-desc mt-2'>
                         {invoice.name}
                     </div>
                 </div>
