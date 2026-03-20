@@ -2,7 +2,7 @@ import { Invoice, Totals } from '@/type'
 import confetti from 'canvas-confetti'
 import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
-import { Layers, Download, Eye, MessageCircle } from 'lucide-react'
+import { Layers, Download, Eye, Send } from 'lucide-react' // Remplacé MessageCircle par Send
 import React, { useRef, useState } from 'react'
 
 interface FacturePDFProps {
@@ -353,7 +353,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
         }
     }
 
-    const handleWhatsApp = async (): Promise<void> => {
+    const handleSend = async (): Promise<void> => {
         if (isGenerating) return
         
         try {
@@ -370,14 +370,14 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                 
                 // Vérifier si l'API Web Share est disponible et supporte les fichiers
                 if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-                    // Partager via l'API Web Share (ouvre WhatsApp directement sur mobile)
+                    // Partager via l'API Web Share
                     await navigator.share({
                         title: `Facture ${invoice.name || invoice.id}`,
                         text: `Facture de ${invoice.issuerName} pour ${invoice.clientName}`,
                         files: [pdfFile]
                     })
                 } else {
-                    // Fallback : Télécharger le PDF et ouvrir WhatsApp
+                    // Fallback : Télécharger le PDF
                     const pdfUrl = URL.createObjectURL(pdfBlob)
                     
                     // Créer un lien de téléchargement temporaire
@@ -386,40 +386,20 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                     link.download = `facture-${invoice.name || invoice.id}.pdf`
                     link.click()
                     
-                    // Message pour WhatsApp
-                    const message = encodeURIComponent(
-                        `*FACTURE ${invoice.name || invoice.id}*\n\n` +
-                        `De : ${invoice.issuerName}\n` +
-                        `Pour : ${invoice.clientName}\n` +
-                        `Montant TTC : ${totals.totalTTC.toFixed(0)} FCFA\n\n` +
-                        `📎 Veuillez joindre le PDF téléchargé à ce message.`
-                    )
-                    
-                    // Détecter si c'est un mobile
-                    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
-                    
-                    // URL WhatsApp
-                    const whatsappUrl = isMobile
-                        ? `whatsapp://send?text=${message}`
-                        : `https://web.whatsapp.com/send?text=${message}`
-                    
-                    // Ouvrir WhatsApp
-                    window.open(whatsappUrl, '_blank')
+                    // Message pour l'utilisateur
+                    alert('✅ PDF téléchargé !\n\nVous pouvez maintenant l\'envoyer par email, WhatsApp ou tout autre moyen.')
                     
                     // Nettoyer l'URL temporaire
                     setTimeout(() => {
                         URL.revokeObjectURL(pdfUrl)
                     }, 2000)
-                    
-                    // Message d'instruction
-                    alert('✅ PDF téléchargé !\n\n📱 Joignez-le à votre conversation WhatsApp.')
                 }
             }
         } catch (error) {
-            console.error('Erreur lors du partage WhatsApp :', error);
+            console.error('Erreur lors de l\'envoi :', error);
             
             // Fallback simple en cas d'erreur
-            alert('❌ Impossible de partager via WhatsApp.\n\nVeuillez télécharger le PDF et le partager manuellement.');
+            alert('❌ Impossible de partager.\n\nVeuillez télécharger le PDF et le partager manuellement.');
             
             // Télécharger le PDF quand même
             try {
@@ -461,12 +441,11 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                         {isGenerating ? '...' : 'Visualiser'}
                     </button>
                     <button
-                        onClick={handleWhatsApp}
+                        onClick={handleSend}
                         disabled={isGenerating}
-                        className='btn btn-sm flex-1 min-w-[100px] text-white'
-                        style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}>
-                        <MessageCircle className="w-4 mr-1" />
-                        {isGenerating ? '...' : 'WhatsApp'}
+                        className='btn btn-sm btn-info flex-1 min-w-[100px]'>
+                        <Send className="w-4 mr-1" />
+                        {isGenerating ? '...' : 'Envoyer'}
                     </button>
                 </div>
 
@@ -490,11 +469,10 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                                     <Download className="w-3" />
                                 </button>
                                 <button
-                                    onClick={handleWhatsApp}
+                                    onClick={handleSend}
                                     disabled={isGenerating}
-                                    className='btn btn-xs'
-                                    style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}>
-                                    <MessageCircle className="w-3 text-white" />
+                                    className='btn btn-xs btn-info'>
+                                    <Send className="w-3" />
                                 </button>
                                 <button
                                     onClick={toggleViewMode}
@@ -539,12 +517,11 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                         <Eye className="w-4" />
                     </button>
                     <button
-                        onClick={handleWhatsApp}
+                        onClick={handleSend}
                         disabled={isGenerating}
-                        className='btn btn-sm text-white'
-                        style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}>
-                        <MessageCircle className="w-4 mr-1" />
-                        {isGenerating ? 'Préparation...' : 'WhatsApp'}
+                        className='btn btn-sm btn-info'>
+                        <Send className="w-4 mr-1" />
+                        {isGenerating ? 'Préparation...' : 'Envoyer'}
                     </button>
                 </div>
 
