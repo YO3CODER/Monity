@@ -2,7 +2,7 @@ import { Invoice, Totals } from '@/type'
 import confetti from 'canvas-confetti'
 import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
-import { Layers, Download, Eye } from 'lucide-react'
+import { Layers, Download, Eye, MessageCircle } from 'lucide-react'
 import React, { useRef, useState } from 'react'
 
 interface FacturePDFProps {
@@ -353,6 +353,62 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
         }
     }
 
+    const handleWhatsApp = async (): Promise<void> => {
+        if (isGenerating) return
+        
+        try {
+            setIsGenerating(true)
+            const pdf = await generatePDF()
+            if (pdf) {
+                // Convertir le PDF en Blob
+                const pdfBlob = pdf.output('blob')
+                
+                // Créer un URL temporaire pour le blob
+                const pdfUrl = URL.createObjectURL(pdfBlob)
+                
+                // Message pré-formaté
+                const message = encodeURIComponent(
+                    `*FACTURE ${invoice.name || invoice.id}*\n\n` +
+                    `De : ${invoice.issuerName}\n` +
+                    `Pour : ${invoice.clientName}\n` +
+                    `Montant TTC : ${totals.totalTTC.toFixed(0)} FCFA\n\n` +
+                    `Document envoyé depuis Monity`
+                )
+                
+                // Détecter si c'est un mobile
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+                
+                // URL WhatsApp avec le message
+                let whatsappUrl
+                if (isMobile) {
+                    // Sur mobile, on essaie d'ouvrir l'app WhatsApp
+                    whatsappUrl = `whatsapp://send?text=${message}`
+                } else {
+                    // Sur desktop, on ouvre WhatsApp Web
+                    whatsappUrl = `https://web.whatsapp.com/send?text=${message}`
+                }
+                
+                // Ouvrir WhatsApp
+                window.open(whatsappUrl, '_blank')
+                
+                // Nettoyer l'URL temporaire après un délai
+                setTimeout(() => {
+                    URL.revokeObjectURL(pdfUrl)
+                }, 2000)
+                
+                // Informer l'utilisateur
+                setTimeout(() => {
+                    alert('📎 N\'oubliez pas de joindre le PDF à votre message WhatsApp.\n\nLe fichier se trouve dans votre dossier de téléchargements.')
+                }, 1000)
+            }
+        } catch (error) {
+            console.error('Erreur lors de la préparation pour WhatsApp :', error);
+            alert('Une erreur est survenue. Veuillez réessayer.');
+        } finally {
+            setIsGenerating(false)
+        }
+    }
+
     const toggleViewMode = (): void => {
         setIsViewMode(!isViewMode)
     }
@@ -363,20 +419,28 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
         <div className='mt-4 block lg:hidden'>
             <div className='border-base-300 border-2 border-dashed rounded-xl p-4'>
                 {/* Barre d'outils mobile */}
-                <div className='flex gap-2 mb-4'>
+                <div className='flex flex-wrap gap-2 mb-4'>
                     <button
                         onClick={handleDownloadPdf}
                         disabled={isGenerating}
-                        className='btn btn-sm btn-accent flex-1'>
+                        className='btn btn-sm btn-accent flex-1 min-w-[100px]'>
                         <Download className="w-4 mr-1" />
-                        {isGenerating ? 'Génération...' : 'Télécharger'}
+                        {isGenerating ? '...' : 'Télécharger'}
                     </button>
                     <button
                         onClick={handleViewPdf}
                         disabled={isGenerating}
-                        className='btn btn-sm btn-primary flex-1'>
+                        className='btn btn-sm btn-primary flex-1 min-w-[100px]'>
                         <Eye className="w-4 mr-1" />
-                        {isGenerating ? 'Génération...' : 'Visualiser'}
+                        {isGenerating ? '...' : 'Visualiser'}
+                    </button>
+                    <button
+                        onClick={handleWhatsApp}
+                        disabled={isGenerating}
+                        className='btn btn-sm flex-1 min-w-[100px] text-white'
+                        style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}>
+                        <MessageCircle className="w-4 mr-1" />
+                        {isGenerating ? '...' : 'WhatsApp'}
                     </button>
                 </div>
 
@@ -398,6 +462,13 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                                     disabled={isGenerating}
                                     className='btn btn-xs btn-accent'>
                                     <Download className="w-3" />
+                                </button>
+                                <button
+                                    onClick={handleWhatsApp}
+                                    disabled={isGenerating}
+                                    className='btn btn-xs'
+                                    style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}>
+                                    <MessageCircle className="w-3 text-white" />
                                 </button>
                                 <button
                                     onClick={toggleViewMode}
@@ -426,7 +497,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
         {/* Version desktop */}
         <div className='mt-4 hidden lg:block'>
             <div className='border-base-300 border-2 border-dashed rounded-xl p-5'>
-                <div className='flex gap-2 mb-4'>
+                <div className='flex flex-wrap gap-2 mb-4'>
                     <button
                         onClick={handleDownloadPdf}
                         disabled={isGenerating}
@@ -440,6 +511,14 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                         className='btn btn-sm btn-primary'>
                         Visualiser
                         <Eye className="w-4" />
+                    </button>
+                    <button
+                        onClick={handleWhatsApp}
+                        disabled={isGenerating}
+                        className='btn btn-sm text-white'
+                        style={{ backgroundColor: '#25D366', borderColor: '#25D366' }}>
+                        <MessageCircle className="w-4 mr-1" />
+                        {isGenerating ? 'Préparation...' : 'WhatsApp'}
                     </button>
                 </div>
 
