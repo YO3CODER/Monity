@@ -3,7 +3,7 @@
 import { UserButton, useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Layers, Menu, X } from 'lucide-react';
+import { Layers, Menu, X, LogIn, Package, DollarSign, Coins } from 'lucide-react';
 import React, { useEffect, useCallback, useState } from 'react';
 import { getOrCreateUser } from '../actions';
 
@@ -72,8 +72,8 @@ const Navbar = () => {
                     </Link>
                 </div>
 
-                {/* Bouton Budget - masqué sur mobile, visible sur desktop */}
-                <div className='hidden md:block'>
+                {/* Groupe des boutons d'applications externes - visible sur desktop */}
+                <div className='hidden md:flex gap-2'>
                     <Link 
                         href="https://budget-psi-five.vercel.app/"
                         target="_blank"
@@ -81,10 +81,25 @@ const Navbar = () => {
                     >
                         <button 
                             type="button"
-                            className="btn btn-accent btn-outline btn-sm whitespace-nowrap"
+                            className="btn btn-accent btn-outline btn-sm whitespace-nowrap flex items-center gap-2"
                             aria-label="Gérer vos budgets"
                         >
+                            <Coins className="h-4 w-4" />
                             Gérer vos budgets
+                        </button>
+                    </Link>
+                    <Link 
+                        href="https://stock-one-sepia.vercel.app/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        <button 
+                            type="button"
+                            className="btn btn-accent btn-outline btn-sm whitespace-nowrap flex items-center gap-2"
+                            aria-label="Gérer le stock"
+                        >
+                            <Package className="h-4 w-4" />
+                            Gérer le stock
                         </button>
                     </Link>
                 </div>
@@ -92,12 +107,36 @@ const Navbar = () => {
                 {/* Navigation Desktop */}
                 <div className='hidden md:flex space-x-4 items-center'>
                     {renderLinks("btn btn-sm")}
-                    <UserButton afterSignOutUrl="/" />
+                    
+                    {/* Afficher UserButton ou lien de connexion selon l'état de l'utilisateur */}
+                    {isLoaded && !user ? (
+                        <Link 
+                            href="https://flying-buck-38.accounts.dev/sign-in?redirect_url=https%3A%2F%2Fstock-one-sepia.vercel.app%2F&__clerk_db_jwt=dvb_3BJowVxnWwfptyOxZ2DfEK3nfAI"
+                            className="btn btn-accent btn-sm flex items-center gap-2"
+                        >
+                            <LogIn className="h-4 w-4" />
+                            Se connecter
+                        </Link>
+                    ) : (
+                        user && <UserButton afterSignOutUrl="/" />
+                    )}
                 </div>
 
                 {/* Menu Mobile */}
                 <div className='flex md:hidden items-center gap-2'>
-                    <UserButton afterSignOutUrl="/" />
+                    {/* Afficher UserButton ou lien de connexion sur mobile */}
+                    {isLoaded && !user ? (
+                        <Link 
+                            href="https://flying-buck-38.accounts.dev/sign-in?redirect_url=https%3A%2F%2Fstock-one-sepia.vercel.app%2F&__clerk_db_jwt=dvb_3BJowVxnWwfptyOxZ2DfEK3nfAI"
+                            className="btn btn-accent btn-sm flex items-center gap-2"
+                        >
+                            <LogIn className="h-4 w-4" />
+                            Se connecter
+                        </Link>
+                    ) : (
+                        user && <UserButton afterSignOutUrl="/" />
+                    )}
+                    
                     <button
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
                         className='btn btn-ghost btn-sm'
@@ -114,7 +153,7 @@ const Navbar = () => {
                     <div className='flex flex-col space-y-3'>
                         {renderLinks("btn btn-sm w-full justify-start", () => setIsMenuOpen(false))}
                         
-                        {/* Bouton Budget dans le menu mobile */}
+                        {/* Boutons des applications externes dans le menu mobile */}
                         <Link 
                             href="https://budget-psi-five.vercel.app/"
                             target="_blank"
@@ -124,10 +163,27 @@ const Navbar = () => {
                         >
                             <button 
                                 type="button"
-                                className="btn btn-accent btn-outline btn-sm w-full justify-start"
+                                className="btn btn-accent btn-outline btn-sm w-full justify-start flex items-center gap-2"
                                 aria-label="Gérer vos budgets"
                             >
+                                <DollarSign className="h-4 w-4" />
                                 Gérer vos budgets
+                            </button>
+                        </Link>
+                        <Link 
+                            href="https://stock-one-sepia.vercel.app/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className='w-full'
+                            onClick={() => setIsMenuOpen(false)}
+                        >
+                            <button 
+                                type="button"
+                                className="btn btn-accent btn-outline btn-sm w-full justify-start flex items-center gap-2"
+                                aria-label="Gérer le stock"
+                            >
+                                <Package className="h-4 w-4" />
+                                Gérer le stock
                             </button>
                         </Link>
                     </div>
