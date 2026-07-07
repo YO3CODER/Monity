@@ -75,7 +75,7 @@ const Navbar = () => {
                 {/* Groupe des boutons d'applications externes - visible sur desktop */}
                 <div className='hidden md:flex gap-2'>
                     <Link 
-                        href="https://budget-psi-five.vercel.app/"
+                        href="https://budget.yosite.fun/"
                         target="_blank"
                         rel="noopener noreferrer"
                     >
@@ -89,7 +89,7 @@ const Navbar = () => {
                         </button>
                     </Link>
                     <Link 
-                        href="https://stock.yosite.fun /"
+                        href="https://stock.yosite.fun/"
                         target="_blank"
                         rel="noopener noreferrer"
                     >
@@ -155,7 +155,7 @@ const Navbar = () => {
                         
                         {/* Boutons des applications externes dans le menu mobile */}
                         <Link 
-                            href="https://budget-psi-five.vercel.app/"
+                            href="https://budget.yosite.fun/"
                             target="_blank"
                             rel="noopener noreferrer"
                             className='w-full'
@@ -171,7 +171,7 @@ const Navbar = () => {
                             </button>
                         </Link>
                         <Link 
-                            href="https://stock-one-sepia.vercel.app/"
+                            href="https://stock.yosite.fun/"
                             target="_blank"
                             rel="noopener noreferrer"
                             className='w-full'
