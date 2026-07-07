@@ -89,7 +89,7 @@ const Navbar = () => {
                         </button>
                     </Link>
                     <Link 
-                        href="https://stock.yosite.fun/"
+                        href="https://stock.yosite.fun /"
                         target="_blank"
                         rel="noopener noreferrer"
                     >
