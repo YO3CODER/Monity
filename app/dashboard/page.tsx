@@ -167,6 +167,6 @@ export default function DashboardPage() {
           </div>
         </dialog>
       </div>
-    </Wrapper>
+    </Wrapper> 
   );
 }
