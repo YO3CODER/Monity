@@ -1,8 +1,9 @@
 import { Invoice, Totals } from '@/type'
-import { computeBalance } from '@/lib/balance' // AVANCE
-import { buildInvoicePdf } from '@/lib/invoicePdf' // PDF vectoriel (net, léger)
+import { computeBalance } from '@/lib/balance'
+import { buildInvoicePdf, PDF_TEMPLATES, TemplateId } from '@/lib/invoicePdf'
 import confetti from 'canvas-confetti'
-import { Layers, Download, Eye, Send } from 'lucide-react' // Remplacé MessageCircle par Send
+import type jsPDF from 'jspdf'
+import { Layers, Download, Eye, Send } from 'lucide-react'
 import React, { useState } from 'react'
 
 interface FacturePDFProps {
@@ -25,7 +26,6 @@ function formatDate(dateString: string): string {
 
 const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, formatDate, isDesktop = false }) => {
 
-    // AVANCE : avance retenue et reste à payer
     const { advance, remaining } = computeBalance(totals.totalTTC, invoice.advanceAmount)
     const hasAdvance = advance > 0
 
@@ -125,7 +125,6 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
                         </span>
                     </div>
 
-                    {/* AVANCE : affichée seulement s'il y a une avance */}
                     {hasAdvance && (
                         <>
                             <div className='flex justify-between gap-4'>
@@ -177,7 +176,7 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
                         </p>
                     </div>
                 </div>
-                
+
                 <div className='flex justify-between gap-2 text-xs bg-gray-50 p-2 rounded'>
                     <p>
                         <span className='font-bold'>Date:</span> {formatDate(invoice.invoiceDate)}
@@ -256,7 +255,6 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
                     </span>
                 </div>
 
-                {/* AVANCE : affichée seulement s'il y a une avance */}
                 {hasAdvance && (
                     <>
                         <div className='flex justify-between gap-2 text-xs'>
@@ -290,25 +288,27 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
 
     const [isGenerating, setIsGenerating] = useState<boolean>(false)
     const [isViewMode, setIsViewMode] = useState<boolean>(false)
+    const [templateId, setTemplateId] = useState<TemplateId>('classic')
 
-    // Génération d'un vrai PDF (texte vectoriel), identique sur mobile et ordinateur
-    const generatePDF = async () => buildInvoicePdf(invoice, totals)
+    const generatePDF = async (): Promise<jsPDF> => {
+        return buildInvoicePdf(invoice, totals, templateId)
+    }
+
+    const fileName = `facture-${invoice.name || invoice.id}.pdf`
 
     const handleDownloadPdf = async (): Promise<void> => {
         if (isGenerating) return
-        
+
         try {
             setIsGenerating(true)
             const pdf = await generatePDF()
-            if (pdf) {
-                pdf.save(`facture-${invoice.name || invoice.id}.pdf`)
-                confetti({
-                    particleCount: 100,
-                    spread: 70,
-                    origin: { y: 0.6 },
-                    zIndex: 9999
-                })
-            }
+            pdf.save(fileName)
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 },
+                zIndex: 9999
+            })
         } catch (error) {
             console.error('Erreur lors de la génération du PDF :', error);
             alert('Une erreur est survenue lors de la génération du PDF');
@@ -319,16 +319,14 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
 
     const handleViewPdf = async (): Promise<void> => {
         if (isGenerating) return
-        
+
         try {
             setIsGenerating(true)
             const pdf = await generatePDF()
-            if (pdf) {
-                const pdfBlob = pdf.output('blob')
-                const pdfUrl = URL.createObjectURL(pdfBlob)
-                window.open(pdfUrl, '_blank')
-                setTimeout(() => URL.revokeObjectURL(pdfUrl), 60000)
-            }
+            const pdfBlob = pdf.output('blob')
+            const pdfUrl = URL.createObjectURL(pdfBlob)
+            window.open(pdfUrl, '_blank')
+            setTimeout(() => URL.revokeObjectURL(pdfUrl), 60000)
         } catch (error) {
             console.error('Erreur lors de la génération du PDF :', error);
             alert('Une erreur est survenue lors de la génération du PDF');
@@ -339,61 +337,38 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
 
     const handleSend = async (): Promise<void> => {
         if (isGenerating) return
-        
+
         try {
             setIsGenerating(true)
             const pdf = await generatePDF()
-            if (pdf) {
-                // Convertir le PDF en Blob
-                const pdfBlob = pdf.output('blob')
-                
-                // Créer un fichier à partir du blob
-                const pdfFile = new File([pdfBlob], `facture-${invoice.name || invoice.id}.pdf`, { 
-                    type: 'application/pdf' 
+            const pdfBlob = pdf.output('blob')
+            const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' })
+
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+                await navigator.share({
+                    title: `Facture ${invoice.name || invoice.id}`,
+                    text: `Facture de ${invoice.issuerName} pour ${invoice.clientName}`,
+                    files: [pdfFile]
                 })
-                
-                // Vérifier si l'API Web Share est disponible et supporte les fichiers
-                if (navigator.share && navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-                    // Partager via l'API Web Share
-                    await navigator.share({
-                        title: `Facture ${invoice.name || invoice.id}`,
-                        text: `Facture de ${invoice.issuerName} pour ${invoice.clientName}`,
-                        files: [pdfFile]
-                    })
-                } else {
-                    // Fallback : Télécharger le PDF
-                    const pdfUrl = URL.createObjectURL(pdfBlob)
-                    
-                    // Créer un lien de téléchargement temporaire
-                    const link = document.createElement('a')
-                    link.href = pdfUrl
-                    link.download = `facture-${invoice.name || invoice.id}.pdf`
-                    link.click()
-                    
-                    // Message pour l'utilisateur
-                    alert('✅ PDF téléchargé !\n\nVous pouvez maintenant l\'envoyer par email, WhatsApp ou tout autre moyen.')
-                    
-                    // Nettoyer l'URL temporaire
-                    setTimeout(() => {
-                        URL.revokeObjectURL(pdfUrl)
-                    }, 2000)
-                }
+            } else {
+                const pdfUrl = URL.createObjectURL(pdfBlob)
+                const link = document.createElement('a')
+                link.href = pdfUrl
+                link.download = fileName
+                link.click()
+
+                alert('PDF téléchargé.\n\nVous pouvez maintenant l\'envoyer par email, WhatsApp ou tout autre moyen.')
+
+                setTimeout(() => {
+                    URL.revokeObjectURL(pdfUrl)
+                }, 2000)
             }
         } catch (error) {
+            // Annulation du partage par l'utilisateur : rien à faire
+            if (error instanceof DOMException && error.name === 'AbortError') return
+
             console.error('Erreur lors de l\'envoi :', error);
-            
-            // Fallback simple en cas d'erreur
-            alert('❌ Impossible de partager.\n\nVeuillez télécharger le PDF et le partager manuellement.');
-            
-            // Télécharger le PDF quand même
-            try {
-                const pdf = await generatePDF()
-                if (pdf) {
-                    pdf.save(`facture-${invoice.name || invoice.id}.pdf`)
-                }
-            } catch (downloadError) {
-                console.error('Erreur lors du téléchargement de secours :', downloadError);
-            }
+            alert('Impossible de partager.\n\nVeuillez télécharger le PDF et le partager manuellement.');
         } finally {
             setIsGenerating(false)
         }
@@ -403,13 +378,26 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
         setIsViewMode(!isViewMode)
     }
 
+    const templateSelect = (
+        <select
+            value={templateId}
+            onChange={(e) => setTemplateId(e.target.value as TemplateId)}
+            className='select select-bordered select-sm'
+            aria-label='Modèle de PDF'
+        >
+            {PDF_TEMPLATES.map((t) => (
+                <option key={t.id} value={t.id}>{t.label}</option>
+            ))}
+        </select>
+    )
+
     return (
     <>
         {/* Version mobile / tablette */}
         <div className='mt-4 block lg:hidden min-w-0'>
             <div className='border-base-300 border-2 border-dashed rounded-xl p-4'>
-                {/* Barre d'outils mobile */}
                 <div className='flex flex-wrap gap-2 mb-4'>
+                    <div className='w-full'>{templateSelect}</div>
                     <button
                         onClick={handleDownloadPdf}
                         disabled={isGenerating}
@@ -433,14 +421,12 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                     </button>
                 </div>
 
-                {/* Bouton plein écran */}
                 <button
                     onClick={toggleViewMode}
                     className='btn btn-xs btn-ghost w-full mb-2 text-xs'>
                     {isViewMode ? 'Réduire' : 'Voir en plein écran'}
                 </button>
 
-                {/* Mode plein écran */}
                 {isViewMode ? (
                     <div className='fixed inset-0 z-50 bg-white overflow-y-auto'>
                         <div className='sticky top-0 bg-white border-b p-2 flex justify-between items-center z-10'>
@@ -470,14 +456,13 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                         </div>
                     </div>
                 ) : (
-                    /* Mode normal (aperçu) */
                     <div className='p-4 bg-white rounded-lg max-h-[600px] md:max-h-none overflow-y-auto'>
                         <FactureContent invoice={invoice} totals={totals} formatDate={formatDate} />
                     </div>
                 )}
 
                 <p className='text-xs text-gray-500 mt-3 text-center'>
-                    💡 Le PDF généré inclura toute la facture
+                    Le PDF généré inclura toute la facture
                 </p>
             </div>
         </div>
@@ -485,7 +470,8 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
         {/* Version desktop */}
         <div className='mt-4 hidden lg:block min-w-0'>
             <div className='border-base-300 border-2 border-dashed rounded-xl p-5'>
-                <div className='flex flex-wrap gap-2 mb-4'>
+                <div className='flex flex-wrap items-center gap-2 mb-4'>
+                    {templateSelect}
                     <button
                         onClick={handleDownloadPdf}
                         disabled={isGenerating}
@@ -510,16 +496,16 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                 </div>
 
                 <div className='p-8 bg-white rounded-lg'>
-                    <FactureContent 
-                        invoice={invoice} 
-                        totals={totals} 
-                        formatDate={formatDate} 
-                        isDesktop={true} 
+                    <FactureContent
+                        invoice={invoice}
+                        totals={totals}
+                        formatDate={formatDate}
+                        isDesktop={true}
                     />
                 </div>
 
                 <p className='text-sm text-gray-500 mt-4 text-center'>
-                    💡 Le PDF généré inclura toute la facture
+                    Le PDF généré inclura toute la facture
                 </p>
             </div>
         </div> 
