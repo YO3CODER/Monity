@@ -1,5 +1,5 @@
 import { Invoice, Totals } from '@/type'
-import { computeBalance, getAdvanceDueDate } from '@/lib/balance' // AVANCE
+import { computeBalance } from '@/lib/balance' // AVANCE
 import confetti from 'canvas-confetti'
 import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
@@ -26,10 +26,9 @@ function formatDate(dateString: string): string {
 
 const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, formatDate, isDesktop = false }) => {
 
-    // AVANCE : avance retenue, reste à payer et date limite de l'avance
+    // AVANCE : avance retenue et reste à payer
     const { advance, remaining } = computeBalance(totals.totalTTC, invoice.advanceAmount)
     const hasAdvance = advance > 0
-    const advanceDueDate = getAdvanceDueDate(invoice)
 
     if (isDesktop) {
         return (
@@ -63,16 +62,16 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
                     </div>
                 </div>
 
-                <div className='my-6 flex justify-between'>
-                    <div>
+                <div className='my-6 flex justify-between gap-4'>
+                    <div className='min-w-0'>
                         <p className='badge badge-ghost mb-2'>Émetteur</p>
-                        <p className='text-sm font-bold italic'>{invoice.issuerName}</p>
-                        <p className='text-sm text-gray-500 w-52 break-words'>{invoice.issuerAddress}</p>
+                        <p className='text-sm font-bold italic break-words'>{invoice.issuerName}</p>
+                        <p className='text-sm text-gray-500 w-52 max-w-full break-words whitespace-pre-line'>{invoice.issuerAddress}</p>
                     </div>
-                    <div className='text-right'>
+                    <div className='text-right min-w-0'>
                         <p className='badge badge-ghost mb-2'>Client</p>
-                        <p className='text-sm font-bold italic'>{invoice.clientName}</p>
-                        <p className='text-sm text-gray-500 w-52 break-words'>{invoice.clientAddress}</p>
+                        <p className='text-sm font-bold italic break-words'>{invoice.clientName}</p>
+                        <p className='text-sm text-gray-500 w-52 max-w-full break-words whitespace-pre-line'>{invoice.clientAddress}</p>
                     </div>
                 </div>
 
@@ -92,7 +91,7 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
                                 invoice.lines.map((ligne: { description: string; quantity: number; unitPrice: number }, index: number) => (
                                     <tr key={index}>
                                         <td>{index + 1}</td>
-                                        <td>{ligne.description}</td>
+                                        <td className='max-w-xs whitespace-normal break-words'>{ligne.description}</td>
                                         <td>{ligne.quantity}</td>
                                         <td>{ligne.unitPrice.toFixed(2)} FCFA</td>
                                         <td>{(ligne.quantity * ligne.unitPrice).toFixed(2)} FCFA</td>
@@ -130,11 +129,11 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
                     {/* AVANCE : affichée seulement s'il y a une avance */}
                     {hasAdvance && (
                         <>
-                            <div className='flex justify-between'>
+                            <div className='flex justify-between gap-4'>
                                 <span className='font-bold'>
                                     Avance versée{invoice.advanceDate ? ` le ${formatDate(invoice.advanceDate)}` : ''}
                                 </span>
-                                <span>- {advance.toFixed(2)} FCFA</span>
+                                <span className='whitespace-nowrap'>- {advance.toFixed(2)} FCFA</span>
                             </div>
 
                             <div className='flex justify-between border-t pt-2 mt-2'>
@@ -144,10 +143,10 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
                                 </span>
                             </div>
 
-                            {advanceDueDate && (
-                                <div className='flex justify-between text-sm text-gray-500'>
-                                    <span>Date limite de paiement de l&apos;avance</span>
-                                    <span>{formatDate(advanceDueDate)}</span>
+                            {invoice.dueDate && (
+                                <div className='flex justify-between gap-4 text-sm text-gray-500'>
+                                    <span>Reste à payer avant le</span>
+                                    <span className='whitespace-nowrap'>{formatDate(invoice.dueDate)}</span>
                                 </div>
                             )}
                         </>
@@ -180,7 +179,7 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
                     </div>
                 </div>
                 
-                <div className='flex justify-between text-xs bg-gray-50 p-2 rounded'>
+                <div className='flex justify-between gap-2 text-xs bg-gray-50 p-2 rounded'>
                     <p>
                         <span className='font-bold'>Date:</span> {formatDate(invoice.invoiceDate)}
                     </p>
@@ -191,15 +190,15 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
             </div>
 
             <div className='my-4 space-y-3'>
-                <div className='bg-gray-50 p-2 rounded'>
+                <div className='bg-gray-50 p-2 rounded min-w-0'>
                     <p className='badge badge-ghost badge-xs mb-1'>Émetteur</p>
-                    <p className='text-xs font-bold italic'>{invoice.issuerName}</p>
-                    <p className='text-xs text-gray-500 break-words'>{invoice.issuerAddress}</p>
+                    <p className='text-xs font-bold italic break-words'>{invoice.issuerName}</p>
+                    <p className='text-xs text-gray-500 break-words whitespace-pre-line'>{invoice.issuerAddress}</p>
                 </div>
-                <div className='bg-gray-50 p-2 rounded'>
+                <div className='bg-gray-50 p-2 rounded min-w-0'>
                     <p className='badge badge-ghost badge-xs mb-1'>Client</p>
-                    <p className='text-xs font-bold italic'>{invoice.clientName}</p>
-                    <p className='text-xs text-gray-500 break-words'>{invoice.clientAddress}</p>
+                    <p className='text-xs font-bold italic break-words'>{invoice.clientName}</p>
+                    <p className='text-xs text-gray-500 break-words whitespace-pre-line'>{invoice.clientAddress}</p>
                 </div>
             </div>
 
@@ -219,7 +218,7 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
                             invoice.lines.map((ligne: { description: string; quantity: number; unitPrice: number }, index: number) => (
                                 <tr key={index} className='text-xs'>
                                     <td>{index + 1}</td>
-                                    <td className='max-w-[100px] truncate' title={ligne.description}>
+                                    <td className='max-w-[140px] whitespace-normal break-words'>
                                         {ligne.description}
                                     </td>
                                     <td className='text-right'>{ligne.quantity}</td>
@@ -261,11 +260,11 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
                 {/* AVANCE : affichée seulement s'il y a une avance */}
                 {hasAdvance && (
                     <>
-                        <div className='flex justify-between text-xs'>
+                        <div className='flex justify-between gap-2 text-xs'>
                             <span>
                                 Avance{invoice.advanceDate ? ` (${formatDate(invoice.advanceDate)})` : ''}
                             </span>
-                            <span className='font-medium'>- {advance.toFixed(0)} FCFA</span>
+                            <span className='font-medium whitespace-nowrap'>- {advance.toFixed(0)} FCFA</span>
                         </div>
 
                         <div className='flex justify-between text-sm font-bold pt-1 border-t'>
@@ -275,10 +274,10 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
                             </span>
                         </div>
 
-                        {advanceDueDate && (
-                            <div className='flex justify-between text-xs text-gray-500'>
-                                <span>Limite avance</span>
-                                <span>{formatDate(advanceDueDate)}</span>
+                        {invoice.dueDate && (
+                            <div className='flex justify-between gap-2 text-xs text-gray-500'>
+                                <span>Reste à payer avant le</span>
+                                <span className='whitespace-nowrap'>{formatDate(invoice.dueDate)}</span>
                             </div>
                         )}
                     </>
@@ -480,8 +479,8 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
 
     return (
     <>
-        {/* Version mobile */}
-        <div className='mt-4 block lg:hidden'>
+        {/* Version mobile / tablette */}
+        <div className='mt-4 block lg:hidden min-w-0'>
             <div className='border-base-300 border-2 border-dashed rounded-xl p-4'>
                 {/* Barre d'outils mobile */}
                 <div className='flex flex-wrap gap-2 mb-4'>
@@ -546,7 +545,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                     </div>
                 ) : (
                     /* Mode normal (aperçu) */
-                    <div className='p-4 bg-white rounded-lg max-h-[600px] overflow-y-auto' ref={mobileFactureRef}>
+                    <div className='p-4 bg-white rounded-lg max-h-[600px] md:max-h-none overflow-y-auto' ref={mobileFactureRef}>
                         <FactureContent invoice={invoice} totals={totals} formatDate={formatDate} />
                     </div>
                 )}
@@ -558,7 +557,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
         </div>
 
         {/* Version desktop */}
-        <div className='mt-4 hidden lg:block'>
+        <div className='mt-4 hidden lg:block min-w-0'>
             <div className='border-base-300 border-2 border-dashed rounded-xl p-5'>
                 <div className='flex flex-wrap gap-2 mb-4'>
                     <button
@@ -584,7 +583,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                     </button>
                 </div>
 
-                <div className='p-8 bg-white rounded-lg max-h-[800px] overflow-y-auto' ref={desktopFactureRef}>
+                <div className='p-8 bg-white rounded-lg' ref={desktopFactureRef}>
                     <FactureContent 
                         invoice={invoice} 
                         totals={totals} 

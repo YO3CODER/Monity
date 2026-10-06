@@ -10,6 +10,10 @@ import { Save, Trash } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import React, { useCallback, useEffect, useState } from 'react'
 
+// Chaque colonne défile seule (à partir de md). Ajuste 12rem si tu veux
+// plus ou moins de hauteur (12rem = espace pris par la barre du haut + l'en-tête).
+const paneClass = 'min-w-0 md:max-h-[calc(100vh-12rem)] md:overflow-y-auto md:pr-1'
+
 const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [initialInvoice, setInitialInvoice] = useState<Invoice | null>(null);
@@ -140,8 +144,9 @@ const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
             </div>
           </div>
 
-          <div className='flex flex-col md:flex-row w-full gap-4'>
-            <div className='flex w-full md:w-1/3 flex-col'>
+          <div className='flex flex-col md:flex-row md:items-start w-full gap-4'>
+            {/* Colonne gauche : totaux + champs, défile seule */}
+            <div className={`flex w-full md:w-1/3 flex-col ${paneClass}`}>
               <div className='mb-4 bg-base-200 rounded-xl p-7'>
                 <div className='flex justify-between items-center mb-4'>
                   <div className='badge badge-accent'>Totaux</div>
@@ -167,7 +172,8 @@ const Page = ({ params }: { params: Promise<{ invoiceId: string }> }) => {
               <InvoiceInfo invoice={invoice} setInvoice={setInvoice} />
             </div>
 
-            <div className='flex w-full md:w-2/3 flex-col'>
+            {/* Colonne droite : lignes + aperçu de la facture, défile seule */}
+            <div className={`flex w-full md:w-2/3 flex-col ${paneClass}`}>
               <InvoiceLines invoice={invoice} setInvoice={setInvoice} />
               <InvoicePDF invoice={invoice} totals={totals} />
             </div>
