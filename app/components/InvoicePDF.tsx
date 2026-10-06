@@ -1,10 +1,9 @@
 import { Invoice, Totals } from '@/type'
 import { computeBalance } from '@/lib/balance' // AVANCE
+import { buildInvoicePdf } from '@/lib/invoicePdf' // PDF vectoriel (net, léger)
 import confetti from 'canvas-confetti'
-import html2canvas from 'html2canvas-pro'
-import jsPDF from 'jspdf'
 import { Layers, Download, Eye, Send } from 'lucide-react' // Remplacé MessageCircle par Send
-import React, { useRef, useState } from 'react'
+import React, { useState } from 'react'
 
 interface FacturePDFProps {
     invoice: Invoice
@@ -289,84 +288,11 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
 
 const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
 
-    const mobileFactureRef = useRef<HTMLDivElement>(null)
-    const desktopFactureRef = useRef<HTMLDivElement>(null)
     const [isGenerating, setIsGenerating] = useState<boolean>(false)
     const [isViewMode, setIsViewMode] = useState<boolean>(false)
 
-    const generatePDF = async (): Promise<jsPDF | null> => {
-        const isMobile = window.innerWidth < 1024
-        const element = isMobile ? mobileFactureRef.current : desktopFactureRef.current
-        
-        if (!element) {
-            throw new Error("Élément non trouvé")
-        }
-
-        // Obtenir les dimensions réelles de l'élément
-        const originalHeight = element.scrollHeight
-        const originalWidth = element.scrollWidth
-        const originalOverflow = element.style.overflow
-        const originalMaxHeight = element.style.maxHeight
-
-        // Forcer l'affichage complet sans défilement
-        element.style.overflow = 'visible'
-        element.style.maxHeight = 'none'
-        element.style.height = 'auto'
-
-        try {
-            const canvas = await html2canvas(element, { 
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                allowTaint: false,
-                backgroundColor: '#ffffff',
-                windowWidth: isMobile ? Math.max(375, originalWidth) : Math.max(1200, originalWidth),
-                windowHeight: originalHeight,
-                height: originalHeight,
-                onclone: (clonedDoc: Document, clonedElement: HTMLElement) => {
-                    clonedElement.style.display = 'block'
-                    clonedElement.style.overflow = 'visible'
-                    clonedElement.style.maxHeight = 'none'
-                    clonedElement.style.height = 'auto'
-                }
-            })
-            
-            const imgData = canvas.toDataURL('image/png', 1.0)
-
-            const pdf = new jsPDF({
-                orientation: "portrait",
-                unit: "mm",
-                format: "A4"
-            })
-
-            const pdfWidth = pdf.internal.pageSize.getWidth()
-            
-            // Calculer la hauteur du PDF proportionnellement à la largeur
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width
-
-            // Si la hauteur dépasse la page A4, on crée plusieurs pages
-            let heightLeft = pdfHeight
-            let position = 0
-
-            // Ajouter la première page
-            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST')
-            
-            // Si l'image est plus haute qu'une page, on ajoute des pages supplémentaires
-            while (heightLeft > pdf.internal.pageSize.getHeight()) {
-                position = position - pdf.internal.pageSize.getHeight()
-                pdf.addPage()
-                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight, undefined, 'FAST')
-                heightLeft -= pdf.internal.pageSize.getHeight()
-            }
-            
-            return pdf
-        } finally {
-            // Restaurer les styles originaux
-            element.style.overflow = originalOverflow
-            element.style.maxHeight = originalMaxHeight
-            element.style.height = ''
-        }
-    }
+    // Génération d'un vrai PDF (texte vectoriel), identique sur mobile et ordinateur
+    const generatePDF = async () => buildInvoicePdf(invoice, totals)
 
     const handleDownloadPdf = async (): Promise<void> => {
         if (isGenerating) return
@@ -401,7 +327,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                 const pdfBlob = pdf.output('blob')
                 const pdfUrl = URL.createObjectURL(pdfBlob)
                 window.open(pdfUrl, '_blank')
-                setTimeout(() => URL.revokeObjectURL(pdfUrl), 100)
+                setTimeout(() => URL.revokeObjectURL(pdfUrl), 60000)
             }
         } catch (error) {
             console.error('Erreur lors de la génération du PDF :', error);
@@ -539,13 +465,13 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                                 </button>
                             </div>
                         </div>
-                        <div className='p-4 bg-white' ref={mobileFactureRef}>
+                        <div className='p-4 bg-white'>
                             <FactureContent invoice={invoice} totals={totals} formatDate={formatDate} />
                         </div>
                     </div>
                 ) : (
                     /* Mode normal (aperçu) */
-                    <div className='p-4 bg-white rounded-lg max-h-[600px] md:max-h-none overflow-y-auto' ref={mobileFactureRef}>
+                    <div className='p-4 bg-white rounded-lg max-h-[600px] md:max-h-none overflow-y-auto'>
                         <FactureContent invoice={invoice} totals={totals} formatDate={formatDate} />
                     </div>
                 )}
@@ -583,7 +509,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                     </button>
                 </div>
 
-                <div className='p-8 bg-white rounded-lg' ref={desktopFactureRef}>
+                <div className='p-8 bg-white rounded-lg'>
                     <FactureContent 
                         invoice={invoice} 
                         totals={totals} 
