@@ -20,7 +20,7 @@ export async function query<T>(
   try {
     const result = await sql(strings, ...params);
     return result as T[];
-  } catch (error) {
+  } catch (error) { 
     console.error('❌ Erreur SQL:', {
       query: strings.join('?'),
       params,

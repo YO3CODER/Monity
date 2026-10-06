@@ -1,6 +1,7 @@
 import { Invoice } from '@/type'
+import { computeBalance } from '@/lib/balance' // AVANCE
 import { CheckCircle, Clock, FileText, SquareArrowOutUpRight, XCircle } from 'lucide-react';
-import Link from 'next/link';
+import Link from 'next/link'; 
 import React from 'react'
 
 type InvoiceComponentProps = {
@@ -72,6 +73,9 @@ const InvoiceComponent: React.FC<InvoiceComponentProps> = ({ invoice }) => {
 
     const { totalHT, totalVAT, totalTTC } = calculateTotals()
 
+    // AVANCE : avance retenue et reste à payer
+    const { advance, remaining } = computeBalance(totalTTC, invoice.advanceAmount)
+
     return (
         <div className='bg-base-200/90 p-5 rounded-xl space-y-3 shadow'>
             <div className='flex justify-between items-center w-full'>
@@ -111,6 +115,22 @@ const InvoiceComponent: React.FC<InvoiceComponentProps> = ({ invoice }) => {
                             {totalTTC.toFixed(0)} FCFA
                         </span>
                     </div>
+
+                    {/* AVANCE : affichée seulement s'il y a une avance */}
+                    {advance > 0 && (
+                        <div className='mt-2 space-y-1 text-sm'>
+                            <div className='flex justify-between items-center text-gray-600'>
+                                <span>Avance versée :</span>
+                                <span className='font-medium'>- {advance.toFixed(0)} FCFA</span>
+                            </div>
+                            <div className='flex justify-between items-center'>
+                                <span className='font-bold'>Reste à payer :</span>
+                                <span className='font-bold text-error'>
+                                    {remaining.toFixed(0)} FCFA
+                                </span>
+                            </div>
+                        </div>
+                    )}
                     
                     <div className='stat-desc mt-2'>
                         {invoice.name}

@@ -1,4 +1,5 @@
 import { Invoice, Totals } from '@/type'
+import { computeBalance, getAdvanceDueDate } from '@/lib/balance' // AVANCE
 import confetti from 'canvas-confetti'
 import html2canvas from 'html2canvas-pro'
 import jsPDF from 'jspdf'
@@ -24,6 +25,12 @@ function formatDate(dateString: string): string {
 }
 
 const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, formatDate, isDesktop = false }) => {
+
+    // AVANCE : avance retenue, reste à payer et date limite de l'avance
+    const { advance, remaining } = computeBalance(totals.totalTTC, invoice.advanceAmount)
+    const hasAdvance = advance > 0
+    const advanceDueDate = getAdvanceDueDate(invoice)
+
     if (isDesktop) {
         return (
             <>
@@ -119,6 +126,32 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
                             {totals.totalTTC.toFixed(2)} FCFA
                         </span>
                     </div>
+
+                    {/* AVANCE : affichée seulement s'il y a une avance */}
+                    {hasAdvance && (
+                        <>
+                            <div className='flex justify-between'>
+                                <span className='font-bold'>
+                                    Avance versée{invoice.advanceDate ? ` le ${formatDate(invoice.advanceDate)}` : ''}
+                                </span>
+                                <span>- {advance.toFixed(2)} FCFA</span>
+                            </div>
+
+                            <div className='flex justify-between border-t pt-2 mt-2'>
+                                <span className='font-bold'>Reste à payer</span>
+                                <span className='badge badge-warning badge-lg'>
+                                    {remaining.toFixed(2)} FCFA
+                                </span>
+                            </div>
+
+                            {advanceDueDate && (
+                                <div className='flex justify-between text-sm text-gray-500'>
+                                    <span>Date limite de paiement de l&apos;avance</span>
+                                    <span>{formatDate(advanceDueDate)}</span>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
             </>
         )
@@ -224,6 +257,32 @@ const FactureContent: React.FC<FactureContentProps> = ({ invoice, totals, format
                         {totals.totalTTC.toFixed(0)} FCFA
                     </span>
                 </div>
+
+                {/* AVANCE : affichée seulement s'il y a une avance */}
+                {hasAdvance && (
+                    <>
+                        <div className='flex justify-between text-xs'>
+                            <span>
+                                Avance{invoice.advanceDate ? ` (${formatDate(invoice.advanceDate)})` : ''}
+                            </span>
+                            <span className='font-medium'>- {advance.toFixed(0)} FCFA</span>
+                        </div>
+
+                        <div className='flex justify-between text-sm font-bold pt-1 border-t'>
+                            <span>Reste à payer</span>
+                            <span className='badge badge-warning badge-sm'>
+                                {remaining.toFixed(0)} FCFA
+                            </span>
+                        </div>
+
+                        {advanceDueDate && (
+                            <div className='flex justify-between text-xs text-gray-500'>
+                                <span>Limite avance</span>
+                                <span>{formatDate(advanceDueDate)}</span>
+                            </div>
+                        )}
+                    </>
+                )}
             </div>
         </>
     )
@@ -538,7 +597,7 @@ const InvoicePDF: React.FC<FacturePDFProps> = ({ invoice, totals }) => {
                     💡 Le PDF généré inclura toute la facture
                 </p>
             </div>
-        </div>
+        </div> 
     </>
 )
 }

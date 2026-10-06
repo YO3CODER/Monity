@@ -29,6 +29,9 @@ export interface Invoice {
   vatActive: boolean;
   vatRate: number;
   status: number;
+  advanceAmount: number;   // AVANCE : montant versé par le client (0 = pas d'avance)
+  advanceDate: string;     // AVANCE : date de réception de l'avance (YYYY-MM-DD ou '')
+  advanceDueDate: string;  // AVANCE : date limite de paiement de l'avance (YYYY-MM-DD ou '')
   createdAt?: Date | null;
   updatedAt?: Date | null;
   lines: InvoiceLine[]; // Relation avec les lignes
@@ -58,6 +61,9 @@ export interface InvoiceCreateInput {
   vatActive?: boolean;
   vatRate?: number;
   status?: number;
+  advanceAmount?: number;   // AVANCE
+  advanceDate?: string;     // AVANCE
+  advanceDueDate?: string;  // AVANCE
 }
 
 /**
@@ -74,6 +80,9 @@ export interface InvoiceUpdateInput {
   vatActive?: boolean;
   vatRate?: number;
   status?: number;
+  advanceAmount?: number;   // AVANCE
+  advanceDate?: string;     // AVANCE
+  advanceDueDate?: string;  // AVANCE
   lines?: InvoiceLine[];
 }
 
@@ -106,6 +115,9 @@ export function toInvoice(dbInvoice: any, lines: any[] = []): Invoice {
     vatActive: Boolean(dbInvoice.vatActive),
     vatRate: Number(dbInvoice.vatRate) || 20,
     status: Number(dbInvoice.status) || 0,
+    advanceAmount: Number(dbInvoice.advanceAmount) || 0,   // AVANCE (numeric arrive en texte)
+    advanceDate: dbInvoice.advanceDate || '',              // AVANCE
+    advanceDueDate: dbInvoice.advanceDueDate || '',        // AVANCE
     createdAt: dbInvoice.createdAt ? new Date(dbInvoice.createdAt) : null,
     updatedAt: dbInvoice.updatedAt ? new Date(dbInvoice.updatedAt) : null,
     lines: lines.map(line => toInvoiceLine(line))

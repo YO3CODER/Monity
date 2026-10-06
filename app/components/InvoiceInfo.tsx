@@ -1,4 +1,5 @@
 import { Invoice } from '@/type'
+import { DEFAULT_ADVANCE_DELAY_DAYS, addDays } from '@/lib/balance' // AVANCE
 import React from 'react'
 
 interface Props {
@@ -15,6 +16,9 @@ const InvoiceInfo: React.FC<Props> = ({ invoice, setInvoice }) => {
     const handleChange = (field: string, value: string) => {
         setInvoice({ ...invoice, [field]: value });
     };
+
+    // AVANCE : date limite suggérée (date de facture + délai par défaut)
+    const suggestedAdvanceDueDate = addDays(invoice?.invoiceDate, DEFAULT_ADVANCE_DELAY_DAYS);
 
     console.log(invoice)
 
@@ -74,6 +78,45 @@ const InvoiceInfo: React.FC<Props> = ({ invoice, setInvoice }) => {
                     required
                     onChange={(e) => handleInputChange(e , 'dueDate')}
                 />
+
+                {/* ===== AVANCE (optionnel) ===== */}
+                <h2 className='badge badge-accent'>Avance versée par le client (optionnel)</h2>
+                <input
+                    type="number"
+                    min={0}
+                    step="any"
+                    inputMode="decimal"
+                    value={invoice?.advanceAmount ? invoice.advanceAmount : ''}
+                    placeholder="Montant de l'avance en FCFA"
+                    className='input input-bordered w-full'
+                    onChange={(e) =>
+                        setInvoice({
+                            ...invoice,
+                            advanceAmount: Math.max(0, Number(e.target.value) || 0),
+                        })
+                    }
+                />
+
+                <h2 className='badge badge-accent'>Date de l&apos;avance</h2>
+                <input
+                    type="date"
+                    value={invoice?.advanceDate || ''}
+                    className='input input-bordered w-full'
+                    onChange={(e) => handleInputChange(e, 'advanceDate')}
+                />
+
+                <h2 className='badge badge-accent'>Date limite de paiement de l&apos;avance</h2>
+                <input
+                    type="date"
+                    value={invoice?.advanceDueDate || ''}
+                    className='input input-bordered w-full'
+                    onChange={(e) => handleInputChange(e, 'advanceDueDate')}
+                />
+                {!invoice?.advanceDueDate && suggestedAdvanceDueDate && (
+                    <p className='text-xs text-gray-500'>
+                        Si vide, la date limite sera le {suggestedAdvanceDueDate} (date de facture + {DEFAULT_ADVANCE_DELAY_DAYS} jours).
+                    </p>
+                )}
             </div>
         </div>
     )

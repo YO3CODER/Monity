@@ -1,4 +1,4 @@
-"use server";
+"use server"; 
 
 import sql from '@/lib/neon';
 import { auth, currentUser } from '@clerk/nextjs/server';
@@ -19,6 +19,9 @@ type DeletedInvoice = {
   vatActive: boolean;
   vatRate: number;
   status: number;
+  advanceAmount: number;   // AVANCE
+  advanceDate: string;     // AVANCE
+  advanceDueDate: string;  // AVANCE
   createdAt: Date;
   updatedAt: Date;
 };
@@ -43,10 +46,14 @@ function toDeletedInvoice(data: unknown): DeletedInvoice | null {
     vatActive: d.vatActive as boolean,
     vatRate: d.vatRate as number,
     status: d.status as number,
+    advanceAmount: Number(d.advanceAmount) || 0,        // AVANCE (numeric arrive en texte)
+    advanceDate: (d.advanceDate as string) || '',       // AVANCE
+    advanceDueDate: (d.advanceDueDate as string) || '', // AVANCE
     createdAt: d.createdAt as Date,
     updatedAt: d.updatedAt as Date
   };
 }
+
 /* =========================
    UTILISATEUR
 ========================= */
@@ -112,6 +119,8 @@ export async function createEmptyInvoice(name: string): Promise<Invoice | null> 
 
     const invoiceId = await generateUniqueId();
 
+    // AVANCE : advanceAmount, advanceDate et advanceDueDate prennent
+    // automatiquement leurs valeurs par défaut (0, '' et '') définies dans Neon
     const [newInvoice] = await sql`
       INSERT INTO "Invoice" (
         id, name, "userId", "issuerName", "issuerAddress", 
@@ -227,6 +236,13 @@ export async function updateInvoice(invoice: Invoice): Promise<boolean | null> {
     `;
     if (!existing) return null;
 
+    // AVANCE : nettoyage des valeurs reçues (jamais négatif, jamais NaN)
+    const advanceAmount = Number.isFinite(Number(invoice.advanceAmount))
+      ? Math.max(0, Number(invoice.advanceAmount))
+      : 0;
+    const advanceDate = invoice.advanceDate ?? '';
+    const advanceDueDate = invoice.advanceDueDate ?? '';
+
     // Mettre à jour la facture
     await sql`
       UPDATE "Invoice" SET
@@ -238,6 +254,9 @@ export async function updateInvoice(invoice: Invoice): Promise<boolean | null> {
         "dueDate" = ${invoice.dueDate},
         "vatActive" = ${invoice.vatActive},
         "vatRate" = ${invoice.vatRate},
+        "advanceAmount" = ${advanceAmount},
+        "advanceDate" = ${advanceDate},
+        "advanceDueDate" = ${advanceDueDate},
         status = ${invoice.status}
       WHERE id = ${invoice.id}
     `;
