@@ -1,5 +1,6 @@
 import { Invoice } from '@/type'
 import React from 'react'
+import BudgetSyncButton from './BudgetSyncButton'
 
 interface Props {
     invoice: Invoice 
@@ -108,6 +109,17 @@ const InvoiceInfo: React.FC<Props> = ({ invoice, setInvoice }) => {
                     <p className='text-xs text-gray-500 break-words'>
                         Le reste à payer est dû avant la date d&apos;échéance ci-dessus.
                     </p>
+                )}
+
+                {/* ===== ENCAISSEMENT -> BUDGET (app 2) ===== */}
+                {invoice?.id && (
+                    <>
+                        <h2 className={labelClass}>Encaissement</h2>
+                        <BudgetSyncButton invoiceId={invoice.id} />
+                        <p className='text-xs text-gray-500 break-words'>
+                            Enregistre d&apos;abord la facture : l&apos;envoi utilise les montants déjà sauvegardés.
+                        </p>
+                    </>
                 )}
             </div>
         </div>
