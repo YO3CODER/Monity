@@ -58,8 +58,8 @@ const Navbar = () => {
     <Image
         src="/logo.svg"
         alt="Monity"
-        width={240}
-        height={80}
+        width={270}
+        height={92}
         priority
         className='h-12 sm:h-16 md:h-20 w-auto'
     />
