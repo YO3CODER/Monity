@@ -27,6 +27,22 @@ export async function getBudgets(): Promise<BudgetOption[]> {
   return res.json()
 }
 
+async function postTransaction(email: string, budgetId: string, amount: number, description: string) {
+  const res = await fetch(`${process.env.BUDGET_API_URL}/api/external/transactions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.BUDGET_API_KEY!,
+    },
+    body: JSON.stringify({ email, budgetId, amount, description }),
+    cache: 'no-store',
+  })
+  if (!res.ok) {
+    const body = (await res.text()).slice(0, 200)
+    throw new Error(`App budget : statut ${res.status} ${body}`)
+  }
+}
+
 export async function syncInvoiceToBudget(
   invoiceId: string,
   budgetId: string
@@ -67,41 +83,44 @@ export async function syncInvoiceToBudget(
     const total = Number(totalRows[0].total) || 0
     const advance = Math.min(Math.max(Number(invoice.advanceAmount) || 0, 0), total)
 
-    // Montant encaissé : tout si la facture est payée, sinon l'avance
+    // Encaissé : tout si la facture est payée, sinon l'avance seule
     const collected = invoice.status === STATUS_PAID ? total : advance
-    const alreadySynced = Number(invoice.budgetSyncedAmount) || 0
-    const delta = collected - alreadySynced
+    let synced = Number(invoice.budgetSyncedAmount) || 0
 
-    if (delta <= 0) return { ok: true, sent: 0 }
+    // Deux paiements possibles : l'avance, puis le solde
+    const fromAdvance = Math.max(0, Math.min(advance, collected) - synced)
+    const fromBalance = Math.max(0, collected - Math.max(synced, advance))
 
-    const label = [invoice.clientName, invoice.name].filter(Boolean).join(' : ')
+    const label = [invoice.clientName, invoice.name].filter(Boolean).join(' : ') || `Facture ${invoiceId}`
 
-    const res = await fetch(`${process.env.BUDGET_API_URL}/api/external/transactions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.BUDGET_API_KEY!,
-      },
-      body: JSON.stringify({
-        email,
-        budgetId,
-        amount: delta,
-        description: label || `Facture ${invoiceId}`,
-      }),
-      cache: 'no-store',
-    })
-
-    if (!res.ok) {
-      const body = (await res.text()).slice(0, 200)
-      return { ok: false, error: `App budget : statut ${res.status} ${body}` }
+    const parts: { amount: number; description: string }[] = []
+    if (fromAdvance > 0) {
+      parts.push({ amount: fromAdvance, description: `${label} (avance)` })
+    }
+    if (fromBalance > 0) {
+      parts.push({
+        amount: fromBalance,
+        description: advance > 0 ? `${label} (solde - paiement final)` : `${label} (paiement)`,
+      })
     }
 
-    await sql`
-      UPDATE "Invoice"
-      SET "budgetId" = ${budgetId}, "budgetSyncedAmount" = ${alreadySynced + delta}
-      WHERE id = ${invoiceId}
-    `
-    return { ok: true, sent: delta }
+    if (parts.length === 0) return { ok: true, sent: 0 }
+
+    let sent = 0
+    for (const part of parts) {
+      await postTransaction(email, budgetId, part.amount, part.description)
+      synced += part.amount
+      sent += part.amount
+
+      // On enregistre après chaque paiement envoyé, pour ne jamais créer de doublon
+      await sql`
+        UPDATE "Invoice"
+        SET "budgetId" = ${budgetId}, "budgetSyncedAmount" = ${synced}
+        WHERE id = ${invoiceId}
+      `
+    }
+
+    return { ok: true, sent }
   } catch (e) {
     console.error('syncInvoiceToBudget', e)
     return { ok: false, error: e instanceof Error ? e.message : 'Erreur inconnue' }
