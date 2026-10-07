@@ -32,23 +32,39 @@ export async function syncInvoiceToBudget(
   budgetId: string
 ): Promise<SyncResult> {
   try {
-    const { id: userId, email } = await getUser()
+    const { id: clerkId, email } = await getUser()
 
-    // Facture + total TTC, uniquement si elle appartient à l'utilisateur
-    // (userId peut contenir l'identifiant Clerk ou l'e-mail selon la façon dont la facture a été créée)
-    const rows = await sql`
-      SELECT i.name, i."clientName", i.status, i."advanceAmount", i."budgetSyncedAmount", t.total
-      FROM "Invoice" i
-      JOIN "InvoiceWithTotals" t ON t.id = i.id
-      WHERE i.id = ${invoiceId}
-        AND (i."userId" = ${userId} OR i."userId" = ${email})
+    // 1. La facture existe-t-elle en base ?
+    const invoiceRows = await sql`
+      SELECT id, name, "clientName", status, "advanceAmount", "budgetSyncedAmount", "userId"
+      FROM "Invoice"
+      WHERE id = ${invoiceId}
     `
-    const invoice = rows[0]
+    const invoice = invoiceRows[0]
     if (!invoice) {
-      return { ok: false, error: 'Facture introuvable (userId différent ou facture non enregistrée).' }
+      return { ok: false, error: `Facture "${invoiceId}" absente de la base. Enregistre-la d'abord.` }
     }
 
-    const total = Number(invoice.total) || 0
+    // 2. Appartient-elle au compte connecté ?
+    const ownerRows = await sql`
+      SELECT id FROM "User"
+      WHERE id = ${invoice.userId}
+        AND (clerk_id = ${clerkId} OR lower(email) = lower(${email}))
+    `
+    const directMatch = invoice.userId === clerkId || invoice.userId === email
+    if (!directMatch && ownerRows.length === 0) {
+      return { ok: false, error: `Cette facture appartient à un autre compte (connecté : ${email}).` }
+    }
+
+    // 3. Total TTC depuis la vue
+    const totalRows = await sql`
+      SELECT total FROM "InvoiceWithTotals" WHERE id = ${invoiceId}
+    `
+    if (totalRows.length === 0) {
+      return { ok: false, error: 'Totaux introuvables pour cette facture (ajoute au moins une ligne).' }
+    }
+
+    const total = Number(totalRows[0].total) || 0
     const advance = Math.min(Math.max(Number(invoice.advanceAmount) || 0, 0), total)
 
     // Montant encaissé : tout si la facture est payée, sinon l'avance
