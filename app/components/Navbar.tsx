@@ -4,7 +4,7 @@ import { UserButton, useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, ChevronDown, LogIn, Package, Coins } from 'lucide-react';
+import { LayoutGrid, ChevronDown, LogIn, Package, Coins, FileText } from 'lucide-react';
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { getOrCreateUser } from '../actions';
 
@@ -47,25 +47,40 @@ const Navbar = () => {
         setIsAppsOpen(false);
     }, [pathname]);
 
+    // Bouton "Mes factures" plein quand on est sur la page, en contour sinon
+    const isInvoicesActive = pathname.replace(/\/$/, "") === "/dashboard";
+
     const itemClass =
         'flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium hover:bg-base-200 transition-colors w-full text-left';
 
     return (
         <nav className='border-b border-base-300 px-4 sm:px-5 md:px-[10%] py-3 sm:py-4'>
             <div className='flex justify-between items-center gap-4'>
-              {/* Logo */}
-<Link href="/" aria-label="Accueil Monity" className='flex-shrink-0'>
-    <Image
-        src="/logo.svg"
-        alt="Monity"
-        width={270}
-        height={92}
-        priority
-        className='h-12 sm:h-16 md:h-20 w-auto'
-    />
-</Link>
+                {/* Logo */}
+                <Link href="/" aria-label="Accueil Monity" className='flex-shrink-0'>
+                    <Image
+                        src="/logo.svg"
+                        alt="Monity"
+                        width={270}
+                        height={92}
+                        priority
+                        className='h-12 sm:h-16 md:h-20 w-auto'
+                    />
+                </Link>
 
                 <div className='flex items-center gap-2 sm:gap-3'>
+                    {/* Bouton Mes factures (icône seule sur petit écran) */}
+                    <Link
+                        href="/dashboard"
+                        aria-label="Mes factures"
+                        className={`btn btn-primary btn-sm sm:btn-md rounded-full flex items-center gap-2 ${
+                            isInvoicesActive ? '' : 'btn-outline'
+                        }`}
+                    >
+                        <FileText className='h-4 w-4 sm:h-5 sm:w-5' />
+                        <span className='hidden sm:inline font-bold'>Mes factures</span>
+                    </Link>
+
                     {/* Menu Apps */}
                     <div className='relative' ref={appsRef}>
                         <button
