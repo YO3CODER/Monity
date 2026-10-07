@@ -14,7 +14,7 @@ const Navbar = () => {
 
     const navLinks = [
         {
-            href: "/",
+            href: "/dashboard",
             label: "Factures"
         }
     ];
@@ -49,7 +49,7 @@ const Navbar = () => {
                     href={href}
                     key={href}
                     onClick={onClick}
-                    className={`${classNames} ${isActiveLink(href) ? 'btn-accent' : 'btn-ghost'}`}
+                    className={`${classNames} ${isActiveLink(href) ? 'btn-primary' : 'btn-primary btn-outline'}`}
                 >
                     {label}
                 </Link>
