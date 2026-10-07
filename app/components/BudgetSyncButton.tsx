@@ -8,6 +8,7 @@ const BudgetSyncButton: React.FC<{ invoiceId: string }> = ({ invoiceId }) => {
   const [budgetId, setBudgetId] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [isError, setIsError] = useState(false)
 
   const loadBudgets = async () => {
     try {
@@ -15,6 +16,7 @@ const BudgetSyncButton: React.FC<{ invoiceId: string }> = ({ invoiceId }) => {
       setMessage('')
       setBudgets(await getBudgets())
     } catch {
+      setIsError(true)
       setMessage('Impossible de charger les budgets.')
     } finally {
       setLoading(false)
@@ -24,13 +26,21 @@ const BudgetSyncButton: React.FC<{ invoiceId: string }> = ({ invoiceId }) => {
   const handleSync = async () => {
     try {
       setLoading(true)
-      const { sent } = await syncInvoiceToBudget(invoiceId, budgetId)
-      setMessage(
-        sent > 0
-          ? `${sent.toFixed(0)} FCFA ajoutés au budget.`
-          : 'Rien de nouveau à ajouter.'
-      )
+      setMessage('')
+      const result = await syncInvoiceToBudget(invoiceId, budgetId)
+      if (result.ok) {
+        setIsError(false)
+        setMessage(
+          result.sent > 0
+            ? `${result.sent.toFixed(0)} FCFA ajoutés au budget.`
+            : 'Rien de nouveau à ajouter.'
+        )
+      } else {
+        setIsError(true)
+        setMessage(`Erreur : ${result.error}`)
+      }
     } catch {
+      setIsError(true)
       setMessage("Erreur : l'ajout au budget a échoué.")
     } finally {
       setLoading(false)
@@ -48,7 +58,7 @@ const BudgetSyncButton: React.FC<{ invoiceId: string }> = ({ invoiceId }) => {
         >
           {loading ? 'Chargement...' : 'Ajouter au budget'}
         </button>
-        {message && <p className="text-sm text-error">{message}</p>}
+        {message && <p className="text-sm text-error break-words">{message}</p>}
       </div>
     )
   }
@@ -75,7 +85,11 @@ const BudgetSyncButton: React.FC<{ invoiceId: string }> = ({ invoiceId }) => {
       >
         {loading ? 'Envoi...' : "Ajouter l'encaissement"}
       </button>
-      {message && <p className="text-sm text-gray-500">{message}</p>}
+      {message && (
+        <p className={`text-sm break-words ${isError ? 'text-error' : 'text-gray-500'}`}>
+          {message}
+        </p>
+      )}
     </div>
   )
 }
