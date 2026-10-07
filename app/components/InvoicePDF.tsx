@@ -1,6 +1,6 @@
 import { Invoice, Totals } from '@/type'
 import { buildInvoicePdf, PDF_TEMPLATES, TemplateId } from '@/lib/invoicePdf'
-import InvoicePreview from '@/app/components/InvoicePreview'
+import InvoicePreview from '@/app/components/previews/InvoicePreview'
 import confetti from 'canvas-confetti'
 import type jsPDF from 'jspdf'
 import { Download, Eye, Send, Maximize2, X } from 'lucide-react'
