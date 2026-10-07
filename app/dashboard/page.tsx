@@ -2,13 +2,18 @@
 
 import Wrapper from "../components/Wrapper";
 import { Layers } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createEmptyInvoice, getInvoices } from "../actions";
 import { useUser } from "@clerk/nextjs";
 import confetti from "canvas-confetti";
 import { Invoice } from "@/type";
 import InvoiceComponent from "../components/InvoiceComponent";
+import EarningsCards from "../components/EarningsCards";
+import { computeEarnings } from "@/lib/balance";
+
+// Change en "XOF" pour le franc CFA
+const CURRENCY = "EUR";
 
 export default function DashboardPage() {
   const { user, isLoaded, isSignedIn } = useUser();
@@ -18,6 +23,8 @@ export default function DashboardPage() {
   const [isNameValid, setIsNameValid] = useState(true);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { earned, toCollect } = useMemo(() => computeEarnings(invoices), [invoices]);
 
   const fetchInvoices = async () => {
     try {
@@ -95,6 +102,11 @@ export default function DashboardPage() {
           </p>
         </div>
 
+        {/* Argent gagné / argent à encaisser */}
+        {!loading && (
+          <EarningsCards earned={earned} toCollect={toCollect} currency={CURRENCY} />
+        )}
+
         <div className="grid md:grid-cols-3 gap-4">
           {/* Bouton de création */}
           <div
@@ -115,9 +127,9 @@ export default function DashboardPage() {
               <span className="loading loading-spinner loading-md text-accent"></span>
             </div>
           ) : invoices.length > 0 ? (
-            invoices.map((invoice) => (
+            invoices.map((invoice, index) => (
               <div key={invoice.id}>
-                <InvoiceComponent invoice={invoice} index={invoices.indexOf(invoice)} />
+                <InvoiceComponent invoice={invoice} index={index} />
               </div>
             ))
           ) : (
@@ -167,6 +179,6 @@ export default function DashboardPage() {
           </div>
         </dialog>
       </div>
-    </Wrapper> 
+    </Wrapper>
   );
 }
