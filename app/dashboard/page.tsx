@@ -12,9 +12,6 @@ import InvoiceComponent from "../components/InvoiceComponent";
 import EarningsCards from "../components/EarningsCards";
 import { computeEarnings } from "@/lib/balance";
 
-// Change en "XOF" pour le franc CFA
-const CURRENCY = "XOF";
-
 export default function DashboardPage() {
   const { user, isLoaded, isSignedIn } = useUser();
   const router = useRouter();
@@ -104,7 +101,7 @@ export default function DashboardPage() {
 
         {/* Argent gagné / argent à encaisser */}
         {!loading && (
-          <EarningsCards earned={earned} toCollect={toCollect} currency={CURRENCY} />
+          <EarningsCards earned={earned} toCollect={toCollect} />
         )}
 
         <div className="grid md:grid-cols-3 gap-4">
