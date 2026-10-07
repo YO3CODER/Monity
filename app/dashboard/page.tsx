@@ -13,7 +13,7 @@ import EarningsCards from "../components/EarningsCards";
 import { computeEarnings } from "@/lib/balance";
 
 // Change en "XOF" pour le franc CFA
-const CURRENCY = "EUR";
+const CURRENCY = "XOF";
 
 export default function DashboardPage() {
   const { user, isLoaded, isSignedIn } = useUser();

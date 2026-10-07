@@ -62,7 +62,7 @@ export function computeEarnings(invoices: Invoice[]) {
     }
 
     // En attente ou impayée : l'avance est déjà gagnée, le reste est à encaisser
-    const { advance, remaining } = computeBalance(total, invoice.advance)
+    const { advance, remaining } = computeBalance(total, invoice.advanceAmount)
     earned += advance
     toCollect += remaining
   }
