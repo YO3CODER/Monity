@@ -4,7 +4,7 @@ import { UserButton, useUser } from '@clerk/nextjs';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { LayoutGrid, ChevronDown, LogIn, Package, Coins, FileText } from 'lucide-react';
+import { LayoutGrid, ChevronDown, LogIn, Package, Coins } from 'lucide-react';
 import React, { useEffect, useCallback, useRef, useState } from 'react';
 import { getOrCreateUser } from '../actions';
 
@@ -47,8 +47,6 @@ const Navbar = () => {
         setIsAppsOpen(false);
     }, [pathname]);
 
-    const isInvoicesActive = pathname.replace(/\/$/, "") === "/dashboard";
-
     const itemClass =
         'flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium hover:bg-base-200 transition-colors w-full text-left';
 
@@ -68,14 +66,6 @@ const Navbar = () => {
                 </Link>
 
                 <div className='flex items-center gap-2 sm:gap-3'>
-                    {/* Bouton Factures (écrans moyens et grands) */}
-                    <Link
-                        href="/dashboard"
-                        className={`hidden md:inline-flex btn btn-sm btn-primary ${isInvoicesActive ? '' : 'btn-outline'}`}
-                    >
-                        Factures
-                    </Link>
-
                     {/* Menu Apps */}
                     <div className='relative' ref={appsRef}>
                         <button
@@ -97,40 +87,27 @@ const Navbar = () => {
                                 role="menu"
                                 className='absolute right-0 mt-2 w-64 z-50 bg-base-100 border border-base-300 rounded-2xl shadow-xl p-2'
                             >
-                                {/* Factures : visible dans le menu sur mobile uniquement */}
-                                <Link
-                                    href="/dashboard"
-                                    role="menuitem"
-                                    className={`${itemClass} md:hidden`}
-                                    onClick={() => setIsAppsOpen(false)}
-                                >
-                                    <FileText className='h-5 w-5' />
-                                    Factures
-                                </Link>
-
-                                <Link
+                                {/* Liens simples, sans target="_blank" : le téléphone peut
+                                    ainsi ouvrir directement l'app installée (PWA) */}
+                                <a
                                     href="https://budget.yosite.fun/"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
                                     role="menuitem"
                                     className={itemClass}
                                     onClick={() => setIsAppsOpen(false)}
                                 >
                                     <Coins className='h-5 w-5' />
                                     Gérer vos budgets
-                                </Link>
+                                </a>
 
-                                <Link
+                                <a
                                     href="https://stock.yosite.fun/"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
                                     role="menuitem"
                                     className={itemClass}
                                     onClick={() => setIsAppsOpen(false)}
                                 >
                                     <Package className='h-5 w-5' />
                                     Gérer le stock
-                                </Link>
+                                </a>
                             </div>
                         )}
                     </div>
