@@ -5,8 +5,9 @@ import { buildCreativePdf } from '@/lib/pdfTemplates/creative'
 import { buildStudioPdf } from '@/lib/pdfTemplates/studio'
 import { buildGreenPdf } from '@/lib/pdfTemplates/green'
 import { buildRedPdf } from '@/lib/pdfTemplates/red'
+import { buildBannerPdf } from '@/lib/pdfTemplates/banner'
 
-export type TemplateId = 'classic' | 'creative' | 'studio' | 'green' | 'red'
+export type TemplateId = 'classic' | 'creative' | 'studio' | 'green' | 'red' | 'banner'
 
 // Pour ajouter un modèle : crée son fichier, puis ajoute une ligne ici et dans BUILDERS
 export const PDF_TEMPLATES: { id: TemplateId; label: string }[] = [
@@ -15,6 +16,7 @@ export const PDF_TEMPLATES: { id: TemplateId; label: string }[] = [
   { id: 'studio', label: 'Modèle 3' },
   { id: 'green', label: 'Modèle 4' },
   { id: 'red', label: 'Modèle 5' },
+  { id: 'banner', label: 'Modèle 6' },
 ]
 
 const BUILDERS: Record<TemplateId, (invoice: Invoice, totals: Totals) => Promise<jsPDF>> = {
@@ -23,6 +25,7 @@ const BUILDERS: Record<TemplateId, (invoice: Invoice, totals: Totals) => Promise
   studio: buildStudioPdf,
   green: buildGreenPdf,
   red: buildRedPdf,
+  banner: buildBannerPdf,
 }
 
 export async function buildInvoicePdf(
