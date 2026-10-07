@@ -53,17 +53,17 @@ const Navbar = () => {
     return (
         <nav className='border-b border-base-300 px-4 sm:px-5 md:px-[10%] py-3 sm:py-4'>
             <div className='flex justify-between items-center gap-4'>
-                {/* Logo */}
-                <Link href="/" aria-label="Accueil Monity" className='flex-shrink-0'>
-                    <Image
-                        src="/logo.svg"
-                        alt="Monity"
-                        width={140}
-                        height={40}
-                        priority
-                        className='h-8 sm:h-10 w-auto'
-                    />
-                </Link>
+              {/* Logo */}
+<Link href="/" aria-label="Accueil Monity" className='flex-shrink-0'>
+    <Image
+        src="/logo.svg"
+        alt="Monity"
+        width={240}
+        height={80}
+        priority
+        className='h-12 sm:h-16 md:h-20 w-auto'
+    />
+</Link>
 
                 <div className='flex items-center gap-2 sm:gap-3'>
                     {/* Menu Apps */}
